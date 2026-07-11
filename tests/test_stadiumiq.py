@@ -662,6 +662,105 @@ def test_app_module_routing_shows_fallback_on_import_error(monkeypatch) -> None:
     # No branch matches "Nonexistent Module", so no ImportError fires and it falls through cleanly.
     assert st.session_state.current_module == "Nonexistent Module"
 
+def test_groq_client_inactive_generate_and_stream_raise_value_error() -> None:
+    """Verifies GroqClient.generate/stream refuse to run without an initialized client."""
+    client = GroqClient(api_key=None)
+    assert client.is_active is False
+    assert client.health() is False
+
+    with pytest.raises(ValueError):
+        client.generate(messages=[{"role": "user", "content": "hi"}])
+
+    with pytest.raises(ValueError):
+        next(client.stream(messages=[{"role": "user", "content": "hi"}]))
+
+def test_groq_client_init_handles_sdk_construction_failure(monkeypatch) -> None:
+    """Verifies a failure constructing the underlying Groq SDK client is caught and leaves the
+    wrapper safely inactive instead of raising and crashing the app."""
+    import services.groq_client as groq_client_module
+
+    def exploding_groq(*_args, **_kwargs):
+        raise RuntimeError("bad SDK init")
+
+    monkeypatch.setattr(groq_client_module, "Groq", exploding_groq)
+    client = groq_client_module.GroqClient(api_key="gsk_test_key")
+    assert client.is_active is False
+
+def test_groq_client_health_check_true_and_false_paths() -> None:
+    """Verifies health() reflects success/failure of the underlying ping call."""
+    from unittest.mock import MagicMock
+
+    client = GroqClient(api_key="gsk_test_key")
+    client._client = MagicMock()
+    client._client.chat.completions.create.return_value = MagicMock()
+    assert client.health() is True
+
+    client._client.chat.completions.create.side_effect = Exception("network down")
+    assert client.health() is False
+
+def test_groq_client_generate_success_path() -> None:
+    """Verifies generate() extracts and returns the message content on a normal completion."""
+    from unittest.mock import MagicMock
+
+    client = GroqClient(api_key="gsk_test_key")
+    client._client = MagicMock()
+    mock_choice = MagicMock()
+    mock_choice.message.content = "Hello from Groq"
+    mock_completion = MagicMock()
+    mock_completion.choices = [mock_choice]
+    client._client.chat.completions.create.return_value = mock_completion
+
+    result = client.generate(messages=[{"role": "user", "content": "hi"}], response_format={"type": "json_object"})
+    assert result == "Hello from Groq"
+
+def test_groq_client_generate_reraises_unexpected_exception() -> None:
+    """Verifies generate() re-raises unexpected (non rate-limit/timeout) exceptions rather than
+    silently swallowing them, since the caller (BaseStadiumChain) is responsible for the fallback."""
+    from unittest.mock import MagicMock
+
+    client = GroqClient(api_key="gsk_test_key")
+    client._client = MagicMock()
+    client._client.chat.completions.create.side_effect = RuntimeError("payload crash")
+
+    with pytest.raises(RuntimeError):
+        client.generate(messages=[{"role": "user", "content": "hi"}])
+
+def test_run_app_filters_conflicting_port_and_host_flags(monkeypatch) -> None:
+    """Verifies run_app.py strips container-injected --port/--host flags so Streamlit always
+    binds to the fixed port/address this project relies on for the Replit webview."""
+    from unittest.mock import MagicMock
+
+    import run_app
+
+    captured_cmd = {}
+
+    def fake_run(cmd, shell=False):
+        captured_cmd["cmd"] = cmd
+        captured_cmd["shell"] = shell
+        result = MagicMock()
+        result.returncode = 0
+        return result
+
+    monkeypatch.setattr(run_app.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        run_app.sys,
+        "argv",
+        ["run_app.py", "--port", "9999", "--host=1.2.3.4", "-p", "8888", "--extra-flag"],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_app.main()
+
+    assert exc_info.value.code == 0
+    assert captured_cmd["shell"] is False
+    cmd = captured_cmd["cmd"]
+    assert "--server.port=5000" in cmd
+    assert "--server.address=0.0.0.0" in cmd
+    assert "--port" not in cmd
+    assert "9999" not in cmd
+    assert "--host=1.2.3.4" not in cmd
+    assert "--extra-flag" in cmd
+
 def test_utils_render_html() -> None:
     """Verifies that render_html strips indentation and passes correctly to st.markdown."""
     from unittest.mock import MagicMock
