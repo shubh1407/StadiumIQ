@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+/* ==============================================================================
+   StadiumIQ Theme Variables & Core Rules
+   ============================================================================== */
+:root {
+  --background: #0B0E14;
+  --panel-bg: rgba(255, 255, 255, 0.03);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --neon-green: #00FFCC;
+  --neon-blue: #00E5FF;
+  --gold: #FFD700;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0C4FF;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+}
+
+/* Base Body Styles */
+.stApp {
+  background: radial-gradient(circle at top left, #080D1A, #0E131F, #05070B) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* Headings Customizations */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display) !important;
+  letter-spacing: -0.5px;
+}
+
+/* ==============================================================================
+   Glassmorphism CSS Containers
+   ============================================================================== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 255, 204, 0.3) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 255, 204, 0.08) !important;
+  transform: translateY(-2px);
+}
+
+/* ==============================================================================
+   FIFA World Cup Responsive Banner
+   ============================================================================== */
+.world-cup-banner {
+  background: linear-gradient(135deg, rgba(0, 168, 107, 0.35) 0%, rgba(0, 102, 204, 0.35) 100%) !important;
+  border: 1px solid rgba(0, 255, 204, 0.4) !important;
+  border-radius: 16px !important;
+  padding: 24px !important;
+  text-align: center !important;
+  box-shadow: 0 10px 30px 0 rgba(0, 255, 204, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  margin-bottom: 30px !important;
+  animation: slideInDown 0.6s ease-out;
+}
+
+/* ==============================================================================
+   Streamlit Specific Overrides & Animations
+   ============================================================================== */
+/* Custom styled sidebar panel */
+[data-testid="stSidebar"] {
+  background-color: rgba(11, 14, 20, 0.75) !important;
+  backdrop-filter: blur(20px) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Streamlit main content inner margins */
+.block-container {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+/* Buttons visual feedback hover styles */
+button, .stButton>button {
+  background: linear-gradient(135deg, #00A86B, #0066CC) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  border-radius: 10px !important;
+  border: none !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 4px 15px 0 rgba(0, 168, 107, 0.2) !important;
+}
+
+button:hover, .stButton>button:hover {
+  opacity: 0.95 !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 6px 20px 0 rgba(0, 255, 204, 0.3) !important;
+}
+
+/* Keyframe animations */
+@keyframes slideInDown {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL support
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / JS artifacts (retaining for platform safety if any node process builds)
+node_modules/
+dist/
+
+# Distribution / packaging
+build/
+bin/
+lib/
+lib64/
+*.egg-info/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Streamlit config
+.streamlit/config.toml
+
+# Environments
+.env
+*.env
+!.env.example
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# System Files
+.DS_Store
+Thumbs.db
+*.log
