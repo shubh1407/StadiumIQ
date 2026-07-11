@@ -381,6 +381,107 @@ def test_fan_assistant_chain_streaming_active() -> None:
 
     assert tokens == ["Hello ", "world!"]
 
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "🍔 Halftime (Food Court Rush)",
+        "🏃 After Match (Exit Congestion)",
+        "⛈️ Sudden Weather Shift (Rain/Storm)",
+        "🚨 Critical Emergency Event",
+        "🎟️ Before Match (High Entry Crowd)",
+    ],
+)
+def test_simulator_context_covers_every_scenario(scenario: str) -> None:
+    """Verifies every stadium/crowd context branch returns well-formed data for each simulated phase."""
+    import streamlit as st
+
+    st.session_state["stadium_scenario"] = scenario
+    try:
+        assert StadiumSimulator.get_active_scenario() == scenario
+        assert isinstance(StadiumSimulator.get_stadium_context(), str)
+        assert isinstance(StadiumSimulator.get_crowd_context(), dict)
+        assert isinstance(StadiumSimulator.get_transport_context(), dict)
+        assert isinstance(StadiumSimulator.get_sustainability_context(), dict)
+        assert isinstance(StadiumSimulator.get_operations_context(), dict)
+    finally:
+        del st.session_state["stadium_scenario"]
+
+def test_get_active_scenario_falls_back_when_session_state_unavailable() -> None:
+    """Verifies get_active_scenario degrades gracefully if Streamlit session state raises."""
+    import streamlit as st
+
+    original_session_state = st.session_state
+
+    class ExplodingSessionState:
+        def get(self, *_args, **_kwargs):
+            raise RuntimeError("no script run context")
+
+    st.session_state = ExplodingSessionState()
+    try:
+        assert StadiumSimulator.get_active_scenario() == "Before Match (High Entry Crowd)"
+    finally:
+        st.session_state = original_session_state
+
+@pytest.mark.parametrize(
+    ("query", "expected_snippet"),
+    [
+        ("Where can I find vegan food?", "Concession Guide"),
+        ("Where is the nearest restroom?", "Restroom Locator"),
+        ("Where should I park my car?", "Parking Intelligence"),
+        ("Which gate is my ticket entrance?", "Gate & Entry Status"),
+        ("I need help, someone is hurt!", "EMERGENCY ACTION PROTOCOL"),
+        ("hola, donde esta el estadio?", "Bienvenido"),
+        ("What time does the match start?", "Multilingual Concierge"),
+    ],
+)
+def test_generate_demo_chat_response_covers_intents(query: str, expected_snippet: str) -> None:
+    """Verifies the offline demo chat responder matches every supported intent and language branch."""
+    response = StadiumSimulator.generate_demo_chat_response(query)
+    assert expected_snippet in response
+
+def test_render_world_cup_header_calls_markdown() -> None:
+    """Verifies the World Cup header renders through st.markdown with unsafe_allow_html."""
+    from unittest.mock import MagicMock
+
+    import streamlit as st
+
+    from services.utils import render_world_cup_header
+
+    original_markdown = st.markdown
+    st.markdown = MagicMock()
+    try:
+        render_world_cup_header()
+        st.markdown.assert_called_once()
+        _, kwargs = st.markdown.call_args
+        assert kwargs.get("unsafe_allow_html") is True
+    finally:
+        st.markdown = original_markdown
+
+def test_apply_accessibility_filters_toggles(monkeypatch) -> None:
+    """Verifies accessibility filter CSS is only injected when the relevant session flags are set."""
+    from unittest.mock import MagicMock
+
+    import streamlit as st
+
+    from services.utils import apply_accessibility_filters
+
+    original_markdown = st.markdown
+    st.markdown = MagicMock()
+    try:
+        st.session_state["accessibility_large_text"] = False
+        st.session_state["accessibility_high_contrast"] = False
+        apply_accessibility_filters()
+        st.markdown.assert_not_called()
+
+        st.session_state["accessibility_large_text"] = True
+        apply_accessibility_filters()
+        st.markdown.assert_called_once()
+        assert "font-size" in st.markdown.call_args[0][0]
+    finally:
+        st.markdown = original_markdown
+        del st.session_state["accessibility_large_text"]
+        del st.session_state["accessibility_high_contrast"]
+
 def test_utils_render_html() -> None:
     """Verifies that render_html strips indentation and passes correctly to st.markdown."""
     from unittest.mock import MagicMock

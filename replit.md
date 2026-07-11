@@ -18,5 +18,8 @@ StadiumIQ is a Streamlit-based AI stadium intelligence platform built for FIFA W
 ## Recent changes (2026-07-11)
 - Imported from GitHub; installed Python dependencies and configured the `Start application` workflow.
 - Changed the Streamlit server port from 3000 to 5000 to match Replit's webview requirement.
-- Cleaned up unused imports/variables (ruff) and confirmed no security findings (bandit) or hardcoded secrets.
-- Verified the full pytest suite (18 tests) passes and the app renders correctly in Demo Mode.
+- Added `pyproject.toml` ruff config (E, F, W, I, UP, B); repo is 100% clean on `ruff check .`.
+- Reviewed and justified the only 3 bandit findings with `# nosec` comments (fixed-argv subprocess launch, non-cryptographic cosmetic ID); `bandit -r . -x .pythonlibs,.git,tests` reports 0 issues.
+- Added accessibility improvements: keyboard `:focus-visible` outlines, `prefers-reduced-motion` support, a skip-to-main-content link, `aria-hidden` on decorative emoji, and a `role="main"` landmark.
+- Grew the pytest suite from 18 to 36 tests (added simulator scenario-branch coverage, demo-chat intent coverage, and utils rendering tests); added `pytest-cov` to `requirements.txt`. Coverage is 75% overall, 91%+ on the simulator and 100% on schemas/memory/output-parser-adjacent modules.
+- Verified the app renders correctly in Demo Mode after every change.

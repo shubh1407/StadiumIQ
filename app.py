@@ -81,11 +81,13 @@ def render_sidebar():
         # Header banner inside Sidebar
         st.markdown(
             """
-            <div style="text-align: center; padding: 15px 0;">
-                <h1 style="color: #00FFCC; font-size: 2rem; margin: 0; font-weight: 800; letter-spacing: 1px;">🏟️ StadiumIQ</h1>
+            <div role="banner" style="text-align: center; padding: 15px 0;">
+                <h1 style="color: #00FFCC; font-size: 2rem; margin: 0; font-weight: 800; letter-spacing: 1px;">
+                    <span aria-hidden="true">🏟️</span> StadiumIQ
+                </h1>
                 <p style="color: #A0C4FF; font-size: 0.9rem; margin-top: 5px;">AI Stadium Intelligence Platform</p>
                 <div style="background-color: #00E676; color: #000; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 20px; display: inline-block; margin-top: 5px;">
-                    🏆 FIFA WORLD CUP 2026
+                    <span aria-hidden="true">🏆</span> FIFA WORLD CUP 2026
                 </div>
             </div>
             """,
@@ -139,7 +141,7 @@ def render_sidebar():
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1);' />", unsafe_allow_html=True)
 
         # 🎮 Live Simulation Controller
-        st.markdown("### 🎮 Live Simulation Controller")
+        st.markdown('### <span aria-hidden="true">🎮</span> Live Simulation Controller', unsafe_allow_html=True)
         st.caption("Alter stadium-wide state variables instantly:")
 
         scenarios = [
@@ -162,7 +164,8 @@ def render_sidebar():
             "Select Stadium Phase:",
             scenarios,
             index=default_idx,
-            key="stadium_scenario_selector"
+            key="stadium_scenario_selector",
+            help="Switch the simulated stadium phase to see how live data changes across every module.",
         )
 
         if scenario_select != st.session_state.stadium_scenario:
@@ -183,8 +186,18 @@ def main():
     load_custom_css()
     init_session_states()
 
+    # Skip link lets keyboard/screen-reader users jump straight past the
+    # sidebar navigation into the main module content.
+    st.markdown(
+        '<a href="#main-content" style="position:absolute;left:-9999px;" '
+        'class="skip-link">Skip to main content</a>',
+        unsafe_allow_html=True,
+    )
+
     selected_module = render_sidebar()
     st.session_state.current_module = selected_module
+
+    st.markdown('<div id="main-content" role="main"></div>', unsafe_allow_html=True)
 
     # Render correct module view dynamically with defensive import guards
     try:
