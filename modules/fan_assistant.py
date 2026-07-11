@@ -2,7 +2,7 @@ import streamlit as st
 import time
 from services.llm_chain import FanAssistantChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
+from services.utils import render_status_badge, apply_accessibility_filters, render_html, sanitize_input
 
 def render_fan_assistant() -> None:
     """Renders the official multi-lingual Fan Assistant chatbot module."""
@@ -142,6 +142,7 @@ def render_fan_assistant() -> None:
             user_input = preset_clicked
  
         if user_input:
+            user_input = sanitize_input(user_input)
             # 1. Show user message instantly
             with chat_container:
                 with st.chat_message("user"):

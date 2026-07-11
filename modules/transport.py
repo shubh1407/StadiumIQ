@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 from services.llm_chain import TransportChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
+from services.utils import render_status_badge, apply_accessibility_filters, render_html, sanitize_input
 from models.schemas import TransportnexusResult
 
 def render_transport_nexus() -> None:
@@ -59,10 +59,11 @@ def render_transport_nexus() -> None:
             
             # Fire chain
             chain = TransportChain()
+            clean_dest = sanitize_input(destination_zone)
             with st.spinner("Crunching post-match transit timelines..."):
                 result: TransportnexusResult = chain.get_recommendation(
                     sector_id=sector_id,
-                    destination_zone=destination_zone,
+                    destination_zone=clean_dest,
                     context=trans_context
                 )
                 

@@ -2,7 +2,7 @@ import streamlit as st
 import time
 from services.llm_chain import OpsCommandChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
+from services.utils import render_status_badge, apply_accessibility_filters, render_html, sanitize_input
 from models.schemas import OperationsCommandResult
 
 def render_operations_command() -> None:
@@ -298,10 +298,12 @@ def render_operations_command() -> None:
                 else:
                     # Trigger Operations chain
                     chain = OpsCommandChain()
+                    clean_report = sanitize_input(incident_report)
+                    clean_zone = sanitize_input(zone_location)
                     with st.spinner("Analyzing threat levels and locating closest volunteers..."):
                         result: OperationsCommandResult = chain.manage_incident(
-                            incident_report=incident_report,
-                            zone_location=zone_location,
+                            incident_report=clean_report,
+                            zone_location=clean_zone,
                             reporter_type=reporter_type,
                             context=ops_context
                         )

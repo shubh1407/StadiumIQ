@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Generator, Dict, Any, List, Type, TypeVar
+from typing import Generator, Dict, Any, List, Type, TypeVar, Callable
 from pydantic import BaseModel
 from loguru import logger
 
@@ -32,7 +32,7 @@ class BaseStadiumChain:
         prompt_key: str,
         formatting_args: Dict[str, Any],
         schema_model: Type[T],
-        fallback_func: Any
+        fallback_func: Callable[[], Dict[str, Any]]
     ) -> T:
         """
         Coordinates standard prompting, JSON generation, output parsing, and resilient fallbacks.
