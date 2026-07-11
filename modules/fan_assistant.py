@@ -12,9 +12,9 @@ def render_fan_assistant() -> None:
     render_html(
         """
         <div style="margin-bottom: 25px;">
-            <h2 style="color: #00FFCC; font-weight: 800; margin-bottom: 5px;">💬 Fan Assistant</h2>
+            <h2 style="color: #00FFCC; font-weight: 800; margin-bottom: 5px;">💬 Fan Assistant & Multilingual Concierge</h2>
             <p style="color: #A0C4FF; margin: 0; font-size: 0.95rem;">
-                Official multi-lingual concierge for the FIFA World Cup 2026. Get live navigation guides, concession wait-times, and assistance.
+                Official multi-lingual concierge for the FIFA World Cup 2026. Get live navigation guides, concession wait-times, and assistance in your native language.
             </p>
         </div>
         """
@@ -24,6 +24,24 @@ def render_fan_assistant() -> None:
     col1, col2 = st.columns([1, 2.2], gap="large")
     
     with col1:
+        # Multilingual selector at the top
+        st.markdown("### 🌐 Select Assistant Language")
+        selected_language = st.selectbox(
+            "Preferred Console Language:",
+            [
+                "🇺🇸 English",
+                "🇮🇳 Hindi (हिंदी)",
+                "🇪🇸 Spanish (Español)",
+                "🇫🇷 French (Français)",
+                "🇸🇦 Arabic (العربية)",
+                "🇩🇪 German (Deutsch)",
+                "🇯🇵 Japanese (日本語)",
+                "🇵🇹 Portuguese (Português)"
+            ],
+            index=0
+        )
+        st.session_state.selected_language = selected_language
+        
         st.markdown("### 🏟️ Stadium Live Status")
         
         # Load simulated context for the side widget
@@ -46,13 +64,39 @@ def render_fan_assistant() -> None:
         st.markdown("### 💡 Quick Actions")
         st.caption("Click any preset query below to instantly route to StadiumIQ:")
         
-        presets = [
-            "🍔 Vegetarian food near Gate B",
-            "🚽 Find a restroom with short queue",
-            "🚗 Where is Lot Blue Overflow?",
-            "🎟️ My mobile ticket won't scan!",
-            "🚨 Medical Emergency near Sector 112"
-        ]
+        # Adjust preset names based on language selection
+        if "Español" in selected_language:
+            presets = [
+                "🍔 Comida vegetariana cerca de Puerta B",
+                "🚽 Encontrar un baño con fila corta",
+                "🚗 ¿Dónde está el estacionamiento Blue Overflow?",
+                "🎟️ ¡Mi boleto móvil no escanea!",
+                "🚨 Emergencia médica cerca del Sector 112"
+            ]
+        elif "Français" in selected_language:
+            presets = [
+                "🍔 Nourriture végétarienne près de la Porte B",
+                "🚽 Trouver des toilettes avec peu de file",
+                "🚗 Où est le parking Blue Overflow ?",
+                "🎟️ Mon billet mobile ne scanne pas !",
+                "🚨 Urgence médicale près du Secteur 112"
+            ]
+        elif "हिंदी" in selected_language:
+            presets = [
+                "🍔 गेट बी के पास शाकाहारी भोजन",
+                "🚽 कम कतार वाला शौचालय खोजें",
+                "🚗 ब्लू ओवरफ्लो पार्किंग कहाँ है?",
+                "🎟️ मेरा मोबाइल टिकट स्कैन नहीं हो रहा है!",
+                "🚨 सेक्टर 112 के पास चिकित्सा आपातकाल"
+            ]
+        else:
+            presets = [
+                "🍔 Vegetarian food near Gate B",
+                "🚽 Find a restroom with short queue",
+                "🚗 Where is Lot Blue Overflow?",
+                "🎟️ My mobile ticket won't scan!",
+                "🚨 Medical Emergency near Sector 112"
+            ]
         
         # Create small styled prompt buttons
         preset_clicked = None
@@ -75,12 +119,12 @@ def render_fan_assistant() -> None:
         with chat_container:
             if not st.session_state.chat_history:
                 render_html(
-                    """
+                    f"""
                     <div style="text-align: center; padding: 80px 20px; color: rgba(255, 255, 255, 0.4);">
                         <span style="font-size: 3rem;">👋</span>
                         <h4 style="margin-top: 15px; font-weight: 700; color: #00FFCC;">StadiumIQ Concierge</h4>
                         <p style="font-size: 0.85rem; max-width: 320px; margin: 5px auto 0 auto;">
-                            Ask me any question in English, Spanish, French, German, or your preferred language.
+                            Selected language: <strong>{selected_language}</strong>. Ask me any question about wheelchair routing, concession waiting times, emergency alerts, taxi/metro schedules, and recycling points.
                         </p>
                     </div>
                     """
@@ -96,7 +140,7 @@ def render_fan_assistant() -> None:
         # Force submit if quick action was clicked
         if preset_clicked:
             user_input = preset_clicked
-
+ 
         if user_input:
             # 1. Show user message instantly
             with chat_container:
@@ -116,10 +160,13 @@ def render_fan_assistant() -> None:
                     mem = ConversationMemory()
                     history_str = mem.get_history(st.session_state.chat_history[:-1])
                     
+                    # Prepend selected language constraint directly into user_query
+                    lang_query = f"[User preferred conversation language: {selected_language}] {user_input}"
+                    
                     # Generate streaming output tokens
                     full_response = ""
                     for token in chain.run_streaming(
-                        user_query=user_input,
+                        user_query=lang_query,
                         history_buffer=history_str,
                         stadium_context=status_text
                     ):
@@ -132,12 +179,12 @@ def render_fan_assistant() -> None:
             # 4. Save response to state and rerun to preserve display
             st.session_state.chat_history.append({"role": "assistant", "content": full_response})
             st.rerun()
-
+ 
         # Clear Conversation Button
         if st.session_state.chat_history:
-            st.markdown("<div style='text-align: right; margin-top: 10px;'>", unsafe_allow_html=True)
-            if st.button("🧹 Clear Chat History", type="secondary"):
-                st.session_state.chat_history = []
-                st.toast("Chat history cleared.")
-                st.rerun()
-            st.markdown("</div>", unsafe_allow_html=True)
+            c1, c2 = st.columns([3, 1])
+            with c2:
+                if st.button("🧹 Clear Chat History", type="secondary", use_container_width=True):
+                    st.session_state.chat_history = []
+                    st.toast("Chat history cleared.")
+                    st.rerun()

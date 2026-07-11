@@ -60,10 +60,11 @@ def render_accessibility_hub() -> None:
         service_type = st.radio(
             "Requested Assistance Program:",
             [
-                "♿ Wheelchair Step-Free Guide",
-                "🔊 Audio Navigation Script (Screen-Reader)",
-                "🧘 Sensory-Friendly Quiet Route",
-                "🦺 Companion Host Physical Dispatch"
+                "♿ Wheelchair Step-Free Route",
+                "👓 Vision Impairment Assistant (Tactile & Verbal)",
+                "👂 Hearing Impairment Visual Beacon Guide",
+                "👵 Senior Citizens Easy-Paced Guide",
+                "👶 Children & Family Support Guide"
             ],
             index=0
         )
@@ -137,6 +138,37 @@ def render_accessibility_hub() -> None:
                 
             if route.companion_team_notified:
                 st.info("System Trigger: Central Inclusion Host Dispatch system was notified automatically during this search.")
+                
+            # 4. Explainable AI Section at the bottom of the result
+            st.markdown("---")
+            st.markdown("### 🔍 Explainable Route Guidance Trust Panel")
+            st.caption("AI-justified routing explanation and confidence logs:")
+            
+            x_col1, x_col2 = st.columns(2)
+            with x_col1:
+                render_html(
+                    f"""
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                        <strong style="color: #00FFCC; font-size: 0.85rem;">🎯 Route Selection Rationale</strong>
+                        <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">{route.reason}</p>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: #A0C4FF;">
+                            Confidence Score: <span style="color: #00FFCC; font-weight: bold;">{route.confidence_score}%</span>
+                        </div>
+                    </div>
+                    """
+                )
+            with x_col2:
+                render_html(
+                    f"""
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                        <strong style="color: #00E5FF; font-size: 0.85rem;">⚡ Inclusive Impact & Fallbacks</strong>
+                        <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">
+                            <strong>Expected Comfort Gain:</strong> {route.expected_impact}<br/>
+                            <strong style="color: #FFEE58; display: inline-block; margin-top: 6px;">Fallback Path:</strong> {route.alternative_recommendation}
+                        </p>
+                    </div>
+                    """
+                )
                 
         else:
             # Show default view before route trigger

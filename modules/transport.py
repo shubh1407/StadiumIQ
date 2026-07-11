@@ -128,13 +128,44 @@ def render_transport_nexus() -> None:
             st.markdown("<br/>", unsafe_allow_html=True)
             render_html(
                 f"""
-                <div style="background: rgba(33, 150, 243, 0.05); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; padding: 15px; font-size: 0.85rem; color: #E0E1DD;">
+                <div style="background: rgba(33, 150, 243, 0.05); border: 1px solid rgba(33, 150, 243, 0.2); border-radius: 12px; padding: 15px; font-size: 0.85rem; color: #E0E1DD; margin-bottom: 25px;">
                     <strong>ℹ️ Operational Directive for Sector Volunteers:</strong><br/>
                     {result.operator_guideline}
                 </div>
                 """
             )
             
+            # 4. Explainable AI Section
+            st.markdown("---")
+            st.markdown("### 🔍 Explainable Dispatch Analytics")
+            st.caption("AI-justified transit scheduling models and safety constraints:")
+            
+            x_col1, x_col2 = st.columns(2)
+            with x_col1:
+                render_html(
+                    f"""
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                        <strong style="color: #00FFCC; font-size: 0.85rem;">🎯 Multi-Modal Choice Rationale</strong>
+                        <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">{result.reason}</p>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: #A0C4FF;">
+                            Prediction Confidence: <span style="color: #00FFCC; font-weight: bold;">{result.confidence_score}%</span>
+                        </div>
+                    </div>
+                    """
+                )
+            with x_col2:
+                render_html(
+                    f"""
+                    <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                        <strong style="color: #00E5FF; font-size: 0.85rem;">⚡ Dispersion Impact & Alternative Options</strong>
+                        <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">
+                            <strong>Expected Flow Relief:</strong> {result.expected_impact}<br/>
+                            <strong style="color: #FFEE58; display: inline-block; margin-top: 6px;">Backup Option:</strong> {result.alternative_recommendation}
+                        </p>
+                    </div>
+                    """
+                )
+                
         else:
             # Render general live shuttle schedules
             st.markdown("### 🚌 Real-Time Charter Shuttle Timelines")
@@ -175,4 +206,3 @@ def render_transport_nexus() -> None:
             )
     pre_match_delay = trans_context["metro"]
     st.info(f"🚇 **{pre_match_delay['line_name']}**: {pre_match_delay['status']} with zero delay. Operating at {pre_match_delay['current_load_pct']}% load.")
-

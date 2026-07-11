@@ -24,10 +24,21 @@ def render_sustainability_monitor() -> None:
     # 1. Fetch live metrics
     eco_context = StadiumSimulator.get_sustainability_context()
     
-    # Run Chain
-    chain = SustainabilityChain()
-    with st.spinner("Monitoring micro-grid power configurations..."):
-        result: SustainabilityResult = chain.monitor_utilities(eco_context)
+    # Run Chain (cached in session-state for instant reruns)
+    if "cached_sustainability_result" not in st.session_state:
+        chain = SustainabilityChain()
+        with st.spinner("Monitoring micro-grid power configurations..."):
+            st.session_state.cached_sustainability_result = chain.monitor_utilities(eco_context)
+            
+    result: SustainabilityResult = st.session_state.cached_sustainability_result
+
+    # On-demand refresh button for utility tracking
+    ref_col1, ref_col2 = st.columns([8, 2])
+    with ref_col2:
+        if st.button("🔄 Refresh Grid", use_container_width=True):
+            if "cached_sustainability_result" in st.session_state:
+                del st.session_state.cached_sustainability_result
+            st.rerun()
         
     # 2. Top-level status indicators
     sc_col1, sc_col2, sc_col3, sc_col4 = st.columns(4)
@@ -104,7 +115,7 @@ def render_sustainability_monitor() -> None:
                 """
             )
             
-        st.markdown("### 🎟️ Fan Eco Gamification Challenges")
+        st.markdown("### ♻️ Fan Eco Gamification Challenges")
         st.caption("Help reduce FIFA World Cup carbon footprint to claim souvenir badges:")
         
         for ch in result.fan_challenges:
@@ -126,3 +137,34 @@ def render_sustainability_monitor() -> None:
         p_dist = st.number_input("Est. Travel Distance to MetLife (Miles):", min_value=1.0, value=15.0)
         calc_carbon = p_dist * 0.404  # average co2 in kg per mile
         st.success(f"🌱 Your travel carbon footprint estimate: **{calc_carbon:.2f} kg of CO2**.")
+
+    # 4. Explainable AI Section
+    st.markdown("---")
+    st.markdown("### 🔍 Explainable Utility Optimization Trust Panel")
+    st.caption("Auditable metrics describing the AI's environmental recommendations:")
+    
+    x_col1, x_col2 = st.columns(2)
+    with x_col1:
+        render_html(
+            f"""
+            <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                <strong style="color: #00FFCC; font-size: 0.85rem;">🎯 Grid Load Reduction Rationale</strong>
+                <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">{result.reason}</p>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #A0C4FF;">
+                    Optimized Accuracy Confidence: <span style="color: #00FFCC; font-weight: bold;">{result.confidence_score}%</span>
+                </div>
+            </div>
+            """
+        )
+    with x_col2:
+        render_html(
+            f"""
+            <div style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); padding: 15px; border-radius: 10px; height: 100%;">
+                <strong style="color: #00E5FF; font-size: 0.85rem;">⚡ Sustainability Impact & Backup Actions</strong>
+                <p style="color: #E0E1DD; font-size: 0.8rem; margin: 6px 0 0 0; line-height: 1.4;">
+                    <strong>Expected Savings:</strong> {result.expected_impact}<br/>
+                    <strong style="color: #FFEE58; display: inline-block; margin-top: 6px;">Micro-Grid Fallback:</strong> {result.alternative_recommendation}
+                </p>
+            </div>
+            """
+        )

@@ -137,38 +137,44 @@ def render_sidebar():
         
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1);' />", unsafe_allow_html=True)
         
-        # Connection Status indicator
-        api_key = os.getenv("GROQ_API_KEY")
-        if api_key:
-            st.markdown(
-                """
-                <div style="background: rgba(0, 230, 118, 0.1); border: 1px solid rgba(0, 230, 118, 0.3); padding: 12px; border-radius: 12px; text-align: center;">
-                    <span style="color: #00E676; font-size: 0.85rem; font-weight: bold;">● AI Core Active</span><br/>
-                    <span style="color: #A0C4FF; font-size: 0.75rem;">Model: Llama 3.3 70B</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                """
-                <div style="background: rgba(255, 171, 0, 0.1); border: 1px solid rgba(255, 171, 0, 0.3); padding: 12px; border-radius: 12px; text-align: center;">
-                    <span style="color: #FFAB00; font-size: 0.85rem; font-weight: bold;">▲ AI Core Inactive</span><br/>
-                    <span style="color: #E0E1DD; font-size: 0.75rem;">Running in High-Fidelity Demo Mode</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+        # 🎮 Live Simulation Controller
+        st.markdown("### 🎮 Live Simulation Controller")
+        st.caption("Alter stadium-wide state variables instantly:")
+        
+        scenarios = [
+            "🎟️ Before Match (High Entry Crowd)",
+            "🍔 Halftime (Food Court Rush)",
+            "🏃 After Match (Exit Congestion)",
+            "⛈️ Sudden Weather Shift (Rain/Storm)",
+            "🚨 Critical Emergency Event"
+        ]
+        
+        if "stadium_scenario" not in st.session_state:
+            st.session_state.stadium_scenario = "🎟️ Before Match (High Entry Crowd)"
             
-        st.markdown(
-            """
-            <div style="margin-top: 40px; text-align: center; color: rgba(255, 255, 255, 0.3); font-size: 0.75rem;">
-                <p>StadiumIQ Enterprise Suite v1.0.0</p>
-                <p>© 2026 Google PromptWars submissions</p>
-            </div>
-            """,
-            unsafe_allow_html=True
+        try:
+            default_idx = scenarios.index(st.session_state.stadium_scenario)
+        except ValueError:
+            default_idx = 0
+            
+        scenario_select = st.sidebar.radio(
+            "Select Stadium Phase:",
+            scenarios,
+            index=default_idx,
+            key="stadium_scenario_selector"
         )
+        
+        if scenario_select != st.session_state.stadium_scenario:
+            st.session_state.stadium_scenario = scenario_select
+            # Clear analysis caches so models are forced to evaluate the new context in real-time
+            if "cached_crowd_analysis" in st.session_state:
+                del st.session_state.cached_crowd_analysis
+            if "cached_sustainability_result" in st.session_state:
+                del st.session_state.cached_sustainability_result
+            st.toast(f"Stadium transitioned to: {scenario_select.split(' ', 1)[1]}!", icon="🔄")
+            st.rerun()
+            
+        st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1);' />", unsafe_allow_html=True)
         
     return selected
 
