@@ -1,4 +1,184 @@
+from functools import lru_cache
 from typing import Any
+
+
+@lru_cache(maxsize=8)
+def _stadium_context_for(scenario: str) -> str:
+    """Pure, cacheable lookup: builds the live operational-state briefing for a given scenario string."""
+    if "Before Match" in scenario:
+        return (
+            "- Gate Statuses: Gate A (Stable queue, 4 mins), Gate B (Heavy queue, 18 mins), Gate C (Fast-track, 2 mins), Gate D (VIP Only, 1 min).\n"
+            "- Restrooms: Level 1 Concourse East (Wait time 9 mins), Concourse West (Wait time 2 mins), Level 3 Upper Concourse (Wait time 12 mins).\n"
+            "- Concessions: GreenBites Organic (Sector 114 - 3 mins), GrillMaster Burgers (Sector 201 - 15 mins), TacoExpress (Sector 304 - 6 mins).\n"
+            "- Ticket Booths: Ticket booth B1 is open for digital credential re-verification. Main Booth is closed.\n"
+            "- Matches: Match 14 (USA vs England) kicking off in 45 minutes. Stadium capacity is currently at 91.2%.\n"
+            "- Weather: 72°F (22°C), Clear Skies, Wind 5mph North."
+        )
+    if "Halftime" in scenario:
+        return (
+            "- Gate Statuses: All gates are wide clear (less than 1 min wait) as fans are seated.\n"
+            "- Restrooms: Level 1 Concourse East (Extreme queue, 14 mins), Concourse West (Wait time 8 mins), Level 3 Upper Concourse (Wait time 15 mins).\n"
+            "- Concessions: GreenBites Organic (Sector 114 - 18 mins), GrillMaster Burgers (Sector 201 - 25 mins), TacoExpress (Sector 304 - 19 mins).\n"
+            "- Ticket Booths: All ticketing booths are closed for halftime shift transition.\n"
+            "- Matches: Halftime (USA 1 - 1 England). Stadium capacity is at 97.8%.\n"
+            "- Weather: 70°F (21°C), Cool Breeze, Sunset."
+        )
+    if "After Match" in scenario:
+        return (
+            "- Gate Statuses: Ingress turnstiles closed. All egress doors Gate A, B, C, D are open at full capacity (dispersion mode).\n"
+            "- Restrooms: Level 1 Concourse East (Wait time 3 mins), Concourse West (Wait time 1 min), Level 3 Upper Concourse (Wait time 4 mins).\n"
+            "- Concessions: Most concession stands closing. Only Express Grab-and-Go is open near exit paths.\n"
+            "- Ticket Booths: All ticket booths closed.\n"
+            "- Matches: Final whistle (USA 2 - 2 England). Rapid fan egress in progress. Current stadium load: 62.4%.\n"
+            "- Weather: 64°F (18°C), Clear Skies, Wind 8mph NW."
+        )
+    if "Weather Shift" in scenario:
+        return (
+            "- Gate Statuses: Gate A (Stable, 3 mins), Gate B (Heavy congestion, 22 mins as fans huddle under canopy), Gate C (Wet surface, 5 mins).\n"
+            "- Restrooms: Level 1 Concourse East (Wait time 10 mins), Concourse West (Wait time 5 mins).\n"
+            "- Concessions: Food courts heavily crowded as outdoor plazas are evacuated due to lightning hazard.\n"
+            "- Ticket Booths: Closed. All staff directed to support interior shelter coordination.\n"
+            "- Matches: 2nd half, 68th minute. Match paused due to lightning proximity. Capacity inside concourse: 100%.\n"
+            "- Weather: 58°F (14°C), Heavy Rain, Active Lightning Storm, Wind 24mph East."
+        )
+    if "Critical Emergency" in scenario:
+        return (
+            "- Gate Statuses: Emergency egress doors unlocked. Gate B turnstiles paused. Gate A/C operating under warden directions.\n"
+            "- Restrooms: All restrooms cleared of occupants by security wardens.\n"
+            "- Concessions: All concession power grid sectors shut down as safety precaution.\n"
+            "- Ticket Booths: Closed. Staff stationed at nearest evacuation pathways.\n"
+            "- Matches: Match suspended. Evacuation directives active for Sector 205 concourse due to isolated facility incident.\n"
+            "- Weather: 72°F (22°C), Clear Skies, Wind Calm."
+        )
+    return "- Stadium operational status stable."
+
+
+@lru_cache(maxsize=8)
+def _crowd_context_for(scenario: str) -> tuple:
+    """Pure, cacheable lookup: builds the crowd-density/safety report for a given scenario string.
+
+    Returns a tuple-wrapped structure (via a small serialization shim) so the result is hashable
+    enough for lru_cache while callers still receive a plain dict (see get_crowd_context, which
+    wraps this in dict()); the nested lists/dicts below are treated as opaque immutable payloads
+    since this function never mutates them internally.
+    """
+    if "Before Match" in scenario:
+        payload = {
+            "overall_occupancy_pct": 91.2,
+            "total_fans_in_stadium": 75240,
+            "risk_level": "Yellow",
+            "bottleneck_zones": [
+                {"zone_id": "Concourse-B-East", "density_index": 8.7, "status": "Critical", "flow_rate": "15 people/min"},
+                {"zone_id": "Gate-D-Ingress", "density_index": 6.4, "status": "Warning", "flow_rate": "42 people/min"},
+                {"zone_id": "Plaza-North-Food-Court", "density_index": 4.1, "status": "Stable", "flow_rate": "85 people/min"},
+            ],
+            "alerts": [
+                "⚠️ Slow ingress detected at Gate B outer turnstiles due to scanner recalibrations.",
+                "⚠️ Crowd congestion forming near Sector 112 elevator foyer. Directing fans to western ramp."
+            ],
+            "historical_trends": [
+                {"timestamp": "T-120m", "density": 1.2},
+                {"timestamp": "T-60m", "density": 4.1},
+                {"timestamp": "T-30m", "density": 7.8},
+                {"timestamp": "Live Ingress", "density": 8.7}
+            ]
+        }
+    elif "Halftime" in scenario:
+        payload = {
+            "overall_occupancy_pct": 97.8,
+            "total_fans_in_stadium": 80685,
+            "risk_level": "Yellow",
+            "bottleneck_zones": [
+                {"zone_id": "Sector-114-Concourse", "density_index": 9.4, "status": "Critical", "flow_rate": "5 people/min"},
+                {"zone_id": "Concourse-Level-1-Toilets", "density_index": 9.1, "status": "Critical", "flow_rate": "12 people/min"},
+                {"zone_id": "Gate-B-Turnstiles", "density_index": 1.1, "status": "Stable", "flow_rate": "150 people/min"},
+            ],
+            "alerts": [
+                "⚠️ Food court and concourse concessions near Sector 114 reaching maximum capacity.",
+                "⚠️ Long bathroom lines. Recommending concourse Level 2 toilet blocks with low waiting times."
+            ],
+            "historical_trends": [
+                {"timestamp": "T-30m", "density": 7.8},
+                {"timestamp": "T-10m", "density": 8.2},
+                {"timestamp": "Kickoff", "density": 2.1},
+                {"timestamp": "Halftime Rush", "density": 9.4}
+            ]
+        }
+    elif "After Match" in scenario:
+        payload = {
+            "overall_occupancy_pct": 62.4,
+            "total_fans_in_stadium": 51480,
+            "risk_level": "Yellow",
+            "bottleneck_zones": [
+                {"zone_id": "Transit-Plaza-Egress", "density_index": 9.2, "status": "Critical", "flow_rate": "220 people/min"},
+                {"zone_id": "Gate-C-Egress", "density_index": 7.8, "status": "Warning", "flow_rate": "180 people/min"},
+                {"zone_id": "Concourse-East", "density_index": 3.4, "status": "Stable", "flow_rate": "90 people/min"},
+            ],
+            "alerts": [
+                "⚠️ Major pedestrian congestion at the East Transit Plaza. Recommending Blue Lot bus shuttle loop.",
+                "⚠️ All egress doors are unlocked. Heavy flow on western ramp staircases."
+            ],
+            "historical_trends": [
+                {"timestamp": "80th Min", "density": 3.4},
+                {"timestamp": "85th Min", "density": 4.2},
+                {"timestamp": "Final Whistle", "density": 9.1},
+                {"timestamp": "Egress Live", "density": 9.2}
+            ]
+        }
+    elif "Weather Shift" in scenario:
+        payload = {
+            "overall_occupancy_pct": 97.8,
+            "total_fans_in_stadium": 80685,
+            "risk_level": "Yellow",
+            "bottleneck_zones": [
+                {"zone_id": "Covered-Concourse-B", "density_index": 9.7, "status": "Critical", "flow_rate": "2 people/min"},
+                {"zone_id": "North-Ramp-Slippery", "density_index": 6.8, "status": "Warning", "flow_rate": "30 people/min"},
+                {"zone_id": "Plaza-North-Evac", "density_index": 1.2, "status": "Stable", "flow_rate": "100 people/min"},
+            ],
+            "alerts": [
+                "⚠️ Outdoor plazas evacuated. Extreme crowd density in covered concourses as fans seek shelter.",
+                "⚠️ Wet surfaces reported on North Ramp. Directing facilities to distribute anti-slip mats."
+            ],
+            "historical_trends": [
+                {"timestamp": "1st Half", "density": 2.5},
+                {"timestamp": "Storm Warning", "density": 5.4},
+                {"timestamp": "Match Pause", "density": 9.5},
+                {"timestamp": "Shelter Live", "density": 9.7}
+            ]
+        }
+    elif "Critical Emergency" in scenario:
+        payload = {
+            "overall_occupancy_pct": 89.1,
+            "total_fans_in_stadium": 73507,
+            "risk_level": "Red",
+            "bottleneck_zones": [
+                {"zone_id": "Sector-205-Foyer", "density_index": 9.9, "status": "Critical", "flow_rate": "0 people/min"},
+                {"zone_id": "Gate-B-Exit-Corridor", "density_index": 8.4, "status": "Critical", "flow_rate": "40 people/min"},
+                {"zone_id": "Sector-112-Evac-Ramp", "density_index": 4.5, "status": "Stable", "flow_rate": "120 people/min"},
+            ],
+            "alerts": [
+                "🚨 CRITICAL FIRE ALARM ACTIVE NEAR SECTOR 205 CONCOURSE LEVEL 2.",
+                "🚨 SUSPENDING ALL TRANSIT INGRESS. REDIRECTING ENTIRE STAFF FOR SECTOR 205 EVACUATION PATHWAY PREPARATION."
+            ],
+            "historical_trends": [
+                {"timestamp": "Normal", "density": 4.1},
+                {"timestamp": "Alarm T+1m", "density": 8.9},
+                {"timestamp": "Evacuation Start", "density": 9.9},
+                {"timestamp": "Evacuation T+5m", "density": 9.9}
+            ]
+        }
+    else:
+        payload = {"overall_occupancy_pct": 50.0, "total_fans_in_stadium": 40000, "risk_level": "Green", "bottleneck_zones": [], "alerts": [], "historical_trends": []}
+
+    return _FrozenDict(payload)
+
+
+class _FrozenDict(dict):
+    """A dict subclass that is hashable (by identity) purely so lru_cache can store it as a
+    return value; callers always receive a fresh, mutable copy via dict(_crowd_context_for(...))."""
+
+    def __hash__(self) -> int:  # type: ignore[override]
+        return id(self)
 
 
 class StadiumSimulator:
@@ -6,6 +186,12 @@ class StadiumSimulator:
     Simulates high-fidelity contextual data streams and generates synthetic,
     context-aware responses matching stadium scenarios: Before Match, Halftime,
     After Match, Weather Shift, and Emergency.
+
+    Performance note: Streamlit re-executes the whole script on every user
+    interaction, so the pure/deterministic scenario payloads below are split
+    into `@lru_cache`-wrapped module-level helpers keyed by the scenario
+    string. This avoids rebuilding the same large dict/string literals on
+    every rerun while keeping the public classmethod API unchanged.
     """
 
     @staticmethod
@@ -20,166 +206,12 @@ class StadiumSimulator:
     @classmethod
     def get_stadium_context(cls) -> str:
         """Generates real-time operational state metrics for MetLife Stadium based on active scenario."""
-        scenario = cls.get_active_scenario()
-
-        if "Before Match" in scenario:
-            return (
-                "- Gate Statuses: Gate A (Stable queue, 4 mins), Gate B (Heavy queue, 18 mins), Gate C (Fast-track, 2 mins), Gate D (VIP Only, 1 min).\n"
-                "- Restrooms: Level 1 Concourse East (Wait time 9 mins), Concourse West (Wait time 2 mins), Level 3 Upper Concourse (Wait time 12 mins).\n"
-                "- Concessions: GreenBites Organic (Sector 114 - 3 mins), GrillMaster Burgers (Sector 201 - 15 mins), TacoExpress (Sector 304 - 6 mins).\n"
-                "- Ticket Booths: Ticket booth B1 is open for digital credential re-verification. Main Booth is closed.\n"
-                "- Matches: Match 14 (USA vs England) kicking off in 45 minutes. Stadium capacity is currently at 91.2%.\n"
-                "- Weather: 72°F (22°C), Clear Skies, Wind 5mph North."
-            )
-        elif "Halftime" in scenario:
-            return (
-                "- Gate Statuses: All gates are wide clear (less than 1 min wait) as fans are seated.\n"
-                "- Restrooms: Level 1 Concourse East (Extreme queue, 14 mins), Concourse West (Wait time 8 mins), Level 3 Upper Concourse (Wait time 15 mins).\n"
-                "- Concessions: GreenBites Organic (Sector 114 - 18 mins), GrillMaster Burgers (Sector 201 - 25 mins), TacoExpress (Sector 304 - 19 mins).\n"
-                "- Ticket Booths: All ticketing booths are closed for halftime shift transition.\n"
-                "- Matches: Halftime (USA 1 - 1 England). Stadium capacity is at 97.8%.\n"
-                "- Weather: 70°F (21°C), Cool Breeze, Sunset."
-            )
-        elif "After Match" in scenario:
-            return (
-                "- Gate Statuses: Ingress turnstiles closed. All egress doors Gate A, B, C, D are open at full capacity (dispersion mode).\n"
-                "- Restrooms: Level 1 Concourse East (Wait time 3 mins), Concourse West (Wait time 1 min), Level 3 Upper Concourse (Wait time 4 mins).\n"
-                "- Concessions: Most concession stands closing. Only Express Grab-and-Go is open near exit paths.\n"
-                "- Ticket Booths: All ticket booths closed.\n"
-                "- Matches: Final whistle (USA 2 - 2 England). Rapid fan egress in progress. Current stadium load: 62.4%.\n"
-                "- Weather: 64°F (18°C), Clear Skies, Wind 8mph NW."
-            )
-        elif "Weather Shift" in scenario:
-            return (
-                "- Gate Statuses: Gate A (Stable, 3 mins), Gate B (Heavy congestion, 22 mins as fans huddle under canopy), Gate C (Wet surface, 5 mins).\n"
-                "- Restrooms: Level 1 Concourse East (Wait time 10 mins), Concourse West (Wait time 5 mins).\n"
-                "- Concessions: Food courts heavily crowded as outdoor plazas are evacuated due to lightning hazard.\n"
-                "- Ticket Booths: Closed. All staff directed to support interior shelter coordination.\n"
-                "- Matches: 2nd half, 68th minute. Match paused due to lightning proximity. Capacity inside concourse: 100%.\n"
-                "- Weather: 58°F (14°C), Heavy Rain, Active Lightning Storm, Wind 24mph East."
-            )
-        elif "Critical Emergency" in scenario:
-            return (
-                "- Gate Statuses: Emergency egress doors unlocked. Gate B turnstiles paused. Gate A/C operating under warden directions.\n"
-                "- Restrooms: All restrooms cleared of occupants by security wardens.\n"
-                "- Concessions: All concession power grid sectors shut down as safety precaution.\n"
-                "- Ticket Booths: Closed. Staff stationed at nearest evacuation pathways.\n"
-                "- Matches: Match suspended. Evacuation directives active for Sector 205 concourse due to isolated facility incident.\n"
-                "- Weather: 72°F (22°C), Clear Skies, Wind Calm."
-            )
-        return "- Stadium operational status stable."
+        return _stadium_context_for(cls.get_active_scenario())
 
     @classmethod
     def get_crowd_context(cls) -> dict[str, Any]:
         """Generates structured crowd distribution and safety hazard tracking data based on active scenario."""
-        scenario = cls.get_active_scenario()
-
-        if "Before Match" in scenario:
-            return {
-                "overall_occupancy_pct": 91.2,
-                "total_fans_in_stadium": 75240,
-                "risk_level": "Yellow",
-                "bottleneck_zones": [
-                    {"zone_id": "Concourse-B-East", "density_index": 8.7, "status": "Critical", "flow_rate": "15 people/min"},
-                    {"zone_id": "Gate-D-Ingress", "density_index": 6.4, "status": "Warning", "flow_rate": "42 people/min"},
-                    {"zone_id": "Plaza-North-Food-Court", "density_index": 4.1, "status": "Stable", "flow_rate": "85 people/min"},
-                ],
-                "alerts": [
-                    "⚠️ Slow ingress detected at Gate B outer turnstiles due to scanner recalibrations.",
-                    "⚠️ Crowd congestion forming near Sector 112 elevator foyer. Directing fans to western ramp."
-                ],
-                "historical_trends": [
-                    {"timestamp": "T-120m", "density": 1.2},
-                    {"timestamp": "T-60m", "density": 4.1},
-                    {"timestamp": "T-30m", "density": 7.8},
-                    {"timestamp": "Live Ingress", "density": 8.7}
-                ]
-            }
-        elif "Halftime" in scenario:
-            return {
-                "overall_occupancy_pct": 97.8,
-                "total_fans_in_stadium": 80685,
-                "risk_level": "Yellow",
-                "bottleneck_zones": [
-                    {"zone_id": "Sector-114-Concourse", "density_index": 9.4, "status": "Critical", "flow_rate": "5 people/min"},
-                    {"zone_id": "Concourse-Level-1-Toilets", "density_index": 9.1, "status": "Critical", "flow_rate": "12 people/min"},
-                    {"zone_id": "Gate-B-Turnstiles", "density_index": 1.1, "status": "Stable", "flow_rate": "150 people/min"},
-                ],
-                "alerts": [
-                    "⚠️ Food court and concourse concessions near Sector 114 reaching maximum capacity.",
-                    "⚠️ Long bathroom lines. Recommending concourse Level 2 toilet blocks with low waiting times."
-                ],
-                "historical_trends": [
-                    {"timestamp": "T-30m", "density": 7.8},
-                    {"timestamp": "T-10m", "density": 8.2},
-                    {"timestamp": "Kickoff", "density": 2.1},
-                    {"timestamp": "Halftime Rush", "density": 9.4}
-                ]
-            }
-        elif "After Match" in scenario:
-            return {
-                "overall_occupancy_pct": 62.4,
-                "total_fans_in_stadium": 51480,
-                "risk_level": "Yellow",
-                "bottleneck_zones": [
-                    {"zone_id": "Transit-Plaza-Egress", "density_index": 9.2, "status": "Critical", "flow_rate": "220 people/min"},
-                    {"zone_id": "Gate-C-Egress", "density_index": 7.8, "status": "Warning", "flow_rate": "180 people/min"},
-                    {"zone_id": "Concourse-East", "density_index": 3.4, "status": "Stable", "flow_rate": "90 people/min"},
-                ],
-                "alerts": [
-                    "⚠️ Major pedestrian congestion at the East Transit Plaza. Recommending Blue Lot bus shuttle loop.",
-                    "⚠️ All egress doors are unlocked. Heavy flow on western ramp staircases."
-                ],
-                "historical_trends": [
-                    {"timestamp": "80th Min", "density": 3.4},
-                    {"timestamp": "85th Min", "density": 4.2},
-                    {"timestamp": "Final Whistle", "density": 9.1},
-                    {"timestamp": "Egress Live", "density": 9.2}
-                ]
-            }
-        elif "Weather Shift" in scenario:
-            return {
-                "overall_occupancy_pct": 97.8,
-                "total_fans_in_stadium": 80685,
-                "risk_level": "Yellow",
-                "bottleneck_zones": [
-                    {"zone_id": "Covered-Concourse-B", "density_index": 9.7, "status": "Critical", "flow_rate": "2 people/min"},
-                    {"zone_id": "North-Ramp-Slippery", "density_index": 6.8, "status": "Warning", "flow_rate": "30 people/min"},
-                    {"zone_id": "Plaza-North-Evac", "density_index": 1.2, "status": "Stable", "flow_rate": "100 people/min"},
-                ],
-                "alerts": [
-                    "⚠️ Outdoor plazas evacuated. Extreme crowd density in covered concourses as fans seek shelter.",
-                    "⚠️ Wet surfaces reported on North Ramp. Directing facilities to distribute anti-slip mats."
-                ],
-                "historical_trends": [
-                    {"timestamp": "1st Half", "density": 2.5},
-                    {"timestamp": "Storm Warning", "density": 5.4},
-                    {"timestamp": "Match Pause", "density": 9.5},
-                    {"timestamp": "Shelter Live", "density": 9.7}
-                ]
-            }
-        elif "Critical Emergency" in scenario:
-            return {
-                "overall_occupancy_pct": 89.1,
-                "total_fans_in_stadium": 73507,
-                "risk_level": "Red",
-                "bottleneck_zones": [
-                    {"zone_id": "Sector-205-Foyer", "density_index": 9.9, "status": "Critical", "flow_rate": "0 people/min"},
-                    {"zone_id": "Gate-B-Exit-Corridor", "density_index": 8.4, "status": "Critical", "flow_rate": "40 people/min"},
-                    {"zone_id": "Sector-112-Evac-Ramp", "density_index": 4.5, "status": "Stable", "flow_rate": "120 people/min"},
-                ],
-                "alerts": [
-                    "🚨 CRITICAL FIRE ALARM ACTIVE NEAR SECTOR 205 CONCOURSE LEVEL 2.",
-                    "🚨 SUSPENDING ALL TRANSIT INGRESS. REDIRECTING ENTIRE STAFF FOR SECTOR 205 EVACUATION PATHWAY PREPARATION."
-                ],
-                "historical_trends": [
-                    {"timestamp": "Normal", "density": 4.1},
-                    {"timestamp": "Alarm T+1m", "density": 8.9},
-                    {"timestamp": "Evacuation Start", "density": 9.9},
-                    {"timestamp": "Evacuation T+5m", "density": 9.9}
-                ]
-            }
-        return {"overall_occupancy_pct": 50.0, "total_fans_in_stadium": 40000, "risk_level": "Green", "bottleneck_zones": [], "alerts": [], "historical_trends": []}
+        return dict(_crowd_context_for(cls.get_active_scenario()))
 
     @classmethod
     def get_accessibility_context(cls) -> dict[str, Any]:

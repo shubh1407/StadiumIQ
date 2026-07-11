@@ -96,6 +96,17 @@ def render_sidebar():
 
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1); margin-top: 10px; margin-bottom: 15px;' />", unsafe_allow_html=True)
 
+        # Screen-reader-only legend so the option-menu's decorative icons have
+        # a text equivalent (the icon font itself has no accessible name).
+        st.markdown(
+            '<p style="position:absolute;left:-9999px;">'
+            "Navigation icons: chat bubble (Fan Assistant), people (Crowd Intelligence), "
+            "accessibility symbol (Accessibility Hub), bus (Transport Nexus), "
+            "recycle symbol (Sustainability Monitor), shield (Operations Command)."
+            "</p>",
+            unsafe_allow_html=True,
+        )
+
         # Navigation option menu
         selected = option_menu(
             menu_title="Intelligence Suites",
@@ -193,6 +204,19 @@ def main():
         'class="skip-link">Skip to main content</a>',
         unsafe_allow_html=True,
     )
+
+    # Streamlit's default HTML shell doesn't set a document language; set it
+    # explicitly so screen readers use the correct pronunciation/voice rules.
+    if hasattr(st, "iframe"):
+        st.iframe(
+            "data:text/html,<script>window.parent.document.documentElement.lang = 'en';</script>",
+            height=1,
+        )
+    else:  # pragma: no cover - fallback for older Streamlit versions
+        st.components.v1.html(
+            "<script>window.parent.document.documentElement.lang = 'en';</script>",
+            height=0,
+        )
 
     selected_module = render_sidebar()
     st.session_state.current_module = selected_module
