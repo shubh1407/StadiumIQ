@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 from services.llm_chain import CrowdAnalysisChain
 from services.simulator import StadiumSimulator
 from services.utils import render_status_badge, apply_accessibility_filters, render_html

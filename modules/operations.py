@@ -24,9 +24,6 @@ def render_operations_command() -> None:
     active_scenario = StadiumSimulator.get_active_scenario()
     ops_context = StadiumSimulator.get_operations_context()
     crowd_context = StadiumSimulator.get_crowd_context()
-    trans_context = StadiumSimulator.get_transport_context()
-    eco_context = StadiumSimulator.get_sustainability_context()
-    ada_context = StadiumSimulator.get_accessibility_context()
     
     # Initialize active logged incidents database if empty
     if "incident_database" not in st.session_state:

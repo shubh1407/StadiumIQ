@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 from services.llm_chain import FanAssistantChain
 from services.simulator import StadiumSimulator
 from services.utils import render_status_badge, apply_accessibility_filters, render_html

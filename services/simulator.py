@@ -1,5 +1,3 @@
-import random
-import os
 from typing import Dict, Any, List
 
 class StadiumSimulator:

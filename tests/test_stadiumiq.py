@@ -22,10 +22,7 @@ from models.schemas import (
     TransportnexusResult,
     SustainabilityResult,
     OperationsCommandResult,
-    BottleneckZone,
-    AccessibilityStep,
-    TransitOption,
-    EcoChallenge
+    BottleneckZone
 )
 
 class MockResponseModel(BaseModel):

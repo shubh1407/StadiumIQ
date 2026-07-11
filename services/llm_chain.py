@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Generator, Dict, Any, List, Type, TypeVar
+from typing import Generator, Dict, Any, Type, TypeVar
 from pydantic import BaseModel
 from loguru import logger
 
