@@ -1,6 +1,6 @@
 import os
 import random
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from typing import Any, TypeVar
 
 from loguru import logger
@@ -33,7 +33,7 @@ class BaseStadiumChain:
         prompt_key: str,
         formatting_args: dict[str, Any],
         schema_model: type[T],
-        fallback_func: Any
+        fallback_func: Callable[[], dict[str, Any]]
     ) -> T:
         """
         Coordinates standard prompting, JSON generation, output parsing, and resilient fallbacks.

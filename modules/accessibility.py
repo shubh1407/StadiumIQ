@@ -5,7 +5,7 @@ import streamlit as st
 from models.schemas import AccessibilityRouteResult
 from services.llm_chain import AccessibilityChain
 from services.simulator import StadiumSimulator
-from services.utils import apply_accessibility_filters, render_html, render_status_badge
+from services.utils import apply_accessibility_filters, render_html, render_status_badge, sanitize_input
 
 
 def render_accessibility_hub() -> None:
@@ -92,11 +92,12 @@ def render_accessibility_hub() -> None:
 
             # Load accessibility variables and trigger chain
             chain = AccessibilityChain()
+            clean_dest = sanitize_input(dest_loc)
             with st.spinner("Calculating step-free matrices..."):
                 route: AccessibilityRouteResult = chain.generate_route(
                     service_type=service_type,
                     current_location=cur_loc,
-                    destination=dest_loc,
+                    destination=clean_dest,
                     context=ada_context
                 )
 

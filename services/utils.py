@@ -1,10 +1,25 @@
+import re
+
 import streamlit as st
 
+
+def sanitize_input(text: str) -> str:
+    """
+    Sanitizes user input to prevent prompt injection and cross-site scripting (XSS).
+    Filters potentially dangerous HTML tag structures and prompt directives.
+    """
+    if not text:
+        return ""
+    # Strip basic HTML tags
+    clean = re.sub(r'<[^>]*?>', '', text)
+    # Block/neutralize common prompt injection directives
+    clean = re.sub(r'(?i)(system prompt|ignore previous instructions|you are now a)', '[sanitize_filter]', clean)
+    return clean.strip()
 
 def inject_glassmorphic_card(title: str, content_html: str, border_color: str = "rgba(255, 255, 255, 0.1)") -> None:
     """Renders a beautiful glassmorphic container with custom inner HTML contents."""
     card_style = f"""
-    <div style="
+    <div role="region" aria-label="{title}" style="
         background: rgba(255, 255, 255, 0.03);
         border-radius: 16px;
         border: 1px solid {border_color};
@@ -43,7 +58,7 @@ def render_status_badge(label: str, status_type: str) -> str:
     }
     cfg = colors.get(status_type.lower(), {"bg": "rgba(255,255,255,0.08)", "text": "#E0E1DD", "border": "rgba(255,255,255,0.2)"})
 
-    return f'<span style="background-color: {cfg["bg"]}; color: {cfg["text"]}; border: 1px solid {cfg["border"]}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; letter-spacing: 0.5px;">{label}</span>'
+    return f'<span role="status" aria-label="Status: {label}" style="background-color: {cfg["bg"]}; color: {cfg["text"]}; border: 1px solid {cfg["border"]}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; letter-spacing: 0.5px;">{label}</span>'
 
 def apply_accessibility_filters() -> None:
     """Applies high contrast or large font stylesheets globally using streamlit session states."""
@@ -79,6 +94,12 @@ def apply_accessibility_filters() -> None:
                 background-color: #00FFCC !important;
                 color: #000000 !important;
                 font-weight: 900 !important;
+                border: 2px solid #FFFFFF !important;
+                border-radius: 4px !important;
+            }
+            input, select, textarea, div[data-baseweb="select"], div[role="combobox"] {
+                background-color: #000000 !important;
+                color: #FFFFFF !important;
                 border: 2px solid #FFFFFF !important;
             }
         """

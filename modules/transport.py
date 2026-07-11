@@ -5,7 +5,7 @@ import streamlit as st
 from models.schemas import TransportnexusResult
 from services.llm_chain import TransportChain
 from services.simulator import StadiumSimulator
-from services.utils import apply_accessibility_filters, render_html, render_status_badge
+from services.utils import apply_accessibility_filters, render_html, render_status_badge, sanitize_input
 
 
 def render_transport_nexus() -> None:
@@ -61,10 +61,11 @@ def render_transport_nexus() -> None:
 
             # Fire chain
             chain = TransportChain()
+            clean_dest = sanitize_input(destination_zone)
             with st.spinner("Crunching post-match transit timelines..."):
                 result: TransportnexusResult = chain.get_recommendation(
                     sector_id=sector_id,
-                    destination_zone=destination_zone,
+                    destination_zone=clean_dest,
                     context=trans_context
                 )
 
