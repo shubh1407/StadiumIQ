@@ -4,14 +4,15 @@ StadiumIQ - Streamlit Launch Wrapper
 Sanitizes command-line arguments to handle platform-specific port flags.
 """
 
+import subprocess  # nosec B404 - required to launch the Streamlit server; no untrusted input reaches it
 import sys
-import subprocess
+
 
 def main() -> None:
     # Filter out --port or -p options that can be automatically appended by the container runner
     filtered_args = []
     skip_next = False
-    
+
     for arg in sys.argv[1:]:
         if skip_next:
             skip_next = False
@@ -40,7 +41,7 @@ def main() -> None:
     ] + filtered_args
 
     print(f"Starting Streamlit: {' '.join(cmd)}")
-    sys.exit(subprocess.run(cmd).returncode)
+    sys.exit(subprocess.run(cmd, shell=False).returncode)  # nosec B603 - fixed argv list, shell disabled
 
 if __name__ == "__main__":
     main()

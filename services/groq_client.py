@@ -1,10 +1,12 @@
 import os
 import sys
 import time
-from typing import Generator, Optional, Dict, Any
-from groq import Groq, APIError, APITimeoutError, RateLimitError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from collections.abc import Generator
+from typing import Any
+
+from groq import APIError, APITimeoutError, Groq, RateLimitError
 from loguru import logger
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 # Configure Loguru logger
 logger.remove()
@@ -21,13 +23,13 @@ class GroqClient:
     and supports synchronous/streaming generations under 'llama-3.3-70b-versatile'.
     """
 
-    def __init__(self, api_key: Optional[str] = None) -> None:
+    def __init__(self, api_key: str | None = None) -> None:
         """
         Initializes the Groq client. Never hardcodes secrets; prioritizes env variables.
         """
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.model = "llama-3.3-70b-versatile"
-        self._client: Optional[Groq] = None
+        self._client: Groq | None = None
 
         if self.api_key:
             try:
@@ -73,10 +75,10 @@ class GroqClient:
     )
     def generate(
         self,
-        messages: list[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.2,
         max_tokens: int = 1000,
-        response_format: Optional[Dict[str, Any]] = None
+        response_format: dict[str, Any] | None = None
     ) -> str:
         """
         Generates a completed response using Llama-3.3-70b-versatile.
@@ -118,7 +120,7 @@ class GroqClient:
 
     def stream(
         self,
-        messages: list[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.2,
         max_tokens: int = 1000
     ) -> Generator[str, None, None]:
@@ -131,7 +133,7 @@ class GroqClient:
             raise ValueError("Groq client not initialized. Ensure GROQ_API_KEY is supplied.")
 
         logger.info(f"Initiating completion stream (temperature={temperature}, max_tokens={max_tokens})")
-        
+
         try:
             stream_obj = self._client.chat.completions.create(
                 model=self.model,
@@ -144,7 +146,7 @@ class GroqClient:
                 delta = chunk.choices[0].delta.content
                 if delta:
                     yield delta
-                    
+
         except RateLimitError as rle:
             logger.error(f"RateLimitError encountered in token stream: {str(rle)}")
             yield f"\n\n⚠️ **[Rate Limit Alert]**: {str(rle)}"

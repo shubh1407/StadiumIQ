@@ -1,15 +1,17 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
+
+from models.schemas import SustainabilityResult
 from services.llm_chain import SustainabilityChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
-from models.schemas import SustainabilityResult
+from services.utils import apply_accessibility_filters, render_html, render_status_badge
+
 
 def render_sustainability_monitor() -> None:
     """Renders the Sustainability Monitor dashboard."""
     apply_accessibility_filters()
-    
+
     render_html(
         """
         <div style="margin-bottom: 25px;">
@@ -20,16 +22,16 @@ def render_sustainability_monitor() -> None:
         </div>
         """
     )
-    
+
     # 1. Fetch live metrics
     eco_context = StadiumSimulator.get_sustainability_context()
-    
+
     # Run Chain (cached in session-state for instant reruns)
     if "cached_sustainability_result" not in st.session_state:
         chain = SustainabilityChain()
         with st.spinner("Monitoring micro-grid power configurations..."):
             st.session_state.cached_sustainability_result = chain.monitor_utilities(eco_context)
-            
+
     result: SustainabilityResult = st.session_state.cached_sustainability_result
 
     # On-demand refresh button for utility tracking
@@ -39,7 +41,7 @@ def render_sustainability_monitor() -> None:
             if "cached_sustainability_result" in st.session_state:
                 del st.session_state.cached_sustainability_result
             st.rerun()
-        
+
     # 2. Top-level status indicators
     sc_col1, sc_col2, sc_col3, sc_col4 = st.columns(4)
     with sc_col1:
@@ -62,18 +64,18 @@ def render_sustainability_monitor() -> None:
 
     # 3. Content layout: Left = Waste analytics, Right = Leaderboard & Fan Gamification
     col1, col2 = st.columns([1.6, 1.4], gap="medium")
-    
+
     with col1:
         st.markdown("### 📊 Waste Diversion Analytics")
         st.caption("Active weights of categorized waste diverted from regional landfill sites:")
-        
+
         # Plotly Pie chart for waste segregation ratios
         waste_data = eco_context["waste_segregation"]
         df_waste = pd.DataFrame({
             "Waste Classification": ["Organic Compostable", "Recyclable Plastics", "Residual Landfill"],
             "Weight (Kilograms)": [waste_data["organic_kg"], waste_data["recyclable_plastic_kg"], waste_data["landfill_kg"]]
         })
-        
+
         fig = px.pie(
             df_waste,
             values="Weight (Kilograms)",
@@ -89,16 +91,16 @@ def render_sustainability_monitor() -> None:
             margin=dict(l=10, r=10, t=10, b=10)
         )
         st.plotly_chart(fig, use_container_width=True)
-        
+
         # Energy load balance alert
         st.markdown("<br/>", unsafe_allow_html=True)
         st.markdown("### 💡 Operator Grid Insight")
         st.info(f"⚡ **Grid Optimization Directives**: {result.operator_grid_insight}")
-        
+
     with col2:
         st.markdown("### 🏆 Active Fan Eco Leaderboard")
         st.caption("Tracking plastic-sorting counts across stadium zones:")
-        
+
         for idx, leader in enumerate(eco_context["active_eco_leaderboard"], 1):
             render_html(
                 f"""
@@ -114,10 +116,10 @@ def render_sustainability_monitor() -> None:
                 </div>
                 """
             )
-            
+
         st.markdown("### ♻️ Fan Eco Gamification Challenges")
         st.caption("Help reduce FIFA World Cup carbon footprint to claim souvenir badges:")
-        
+
         for ch in result.fan_challenges:
             render_html(
                 f"""
@@ -130,7 +132,7 @@ def render_sustainability_monitor() -> None:
                 </div>
                 """
             )
-            
+
         # Simulation input to check custom carbon calculators
         st.markdown("---")
         st.markdown("#### Calculate Your Travel Footprint:")
@@ -142,7 +144,7 @@ def render_sustainability_monitor() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Explainable Utility Optimization Trust Panel")
     st.caption("Auditable metrics describing the AI's environmental recommendations:")
-    
+
     x_col1, x_col2 = st.columns(2)
     with x_col1:
         render_html(

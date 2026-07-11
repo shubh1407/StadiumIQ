@@ -110,3 +110,32 @@ button:hover, .stButton>button:hover {
     opacity: 1;
   }
 }
+
+/* ==============================================================================
+   Accessibility: keyboard focus visibility & motion preferences
+   ============================================================================== */
+/* Ensure every interactive element has a clearly visible focus ring for
+   keyboard/screen-reader users, since the default outline is suppressed by
+   several of the !important overrides above. */
+button:focus-visible,
+.stButton > button:focus-visible,
+a:focus-visible,
+[data-testid="stSidebar"] a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--neon-green) !important;
+  outline-offset: 2px !important;
+}
+
+/* Respect the OS-level "reduce motion" preference instead of forcing
+   animations/transitions on everyone. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

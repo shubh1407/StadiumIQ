@@ -1,21 +1,22 @@
 import os
 import random
-from typing import Generator, Dict, Any, Type, TypeVar
-from pydantic import BaseModel
-from loguru import logger
+from collections.abc import Generator
+from typing import Any, TypeVar
 
-from services.groq_client import GroqClient
-from services.prompt_manager import PROMPTS
-from services.output_parser import OutputParser
-from services.simulator import StadiumSimulator
+from loguru import logger
+from pydantic import BaseModel
 
 from models.schemas import (
-    CrowdAnalysisResult,
     AccessibilityRouteResult,
-    TransportnexusResult,
+    CrowdAnalysisResult,
+    OperationsCommandResult,
     SustainabilityResult,
-    OperationsCommandResult
+    TransportnexusResult,
 )
+from services.groq_client import GroqClient
+from services.output_parser import OutputParser
+from services.prompt_manager import PROMPTS
+from services.simulator import StadiumSimulator
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -30,8 +31,8 @@ class BaseStadiumChain:
     def _execute_structured_chain(
         self,
         prompt_key: str,
-        formatting_args: Dict[str, Any],
-        schema_model: Type[T],
+        formatting_args: dict[str, Any],
+        schema_model: type[T],
         fallback_func: Any
     ) -> T:
         """
@@ -45,26 +46,26 @@ class BaseStadiumChain:
             # Load template and construct prompts
             template = PROMPTS[prompt_key]
             user_prompt = template.format(**formatting_args)
-            
+
             # Inject structured formatting constraints
             system_prompt_with_format = (
                 f"{template.system_prompt}\n\n"
                 f"Mandatory: Return the result strictly as a valid JSON object matching this schema definition:\n"
                 f"{schema_model.model_json_schema()}"
             )
-            
+
             messages = [
                 {"role": "system", "content": system_prompt_with_format},
                 {"role": "user", "content": user_prompt}
             ]
-            
+
             raw_response = self.client.generate(
                 messages=messages,
                 temperature=0.1,  # Low temperature for highly deterministic JSON mapping
                 max_tokens=1500,
                 response_format={"type": "json_object"}
             )
-            
+
             # Parse response into target Pydantic model
             return OutputParser.parse_to_model(raw_response, schema_model)
 
@@ -83,7 +84,7 @@ class BaseStadiumChain:
 
 class FanAssistantChain(BaseStadiumChain):
     """Handles fan chatbot conversations with history context and token streaming support."""
-    
+
     def run_streaming(
         self,
         user_query: str,
@@ -108,15 +109,14 @@ class FanAssistantChain(BaseStadiumChain):
                 history=history_buffer,
                 stadium_context=stadium_context
             )
-            
+
             messages = [
                 {"role": "system", "content": template.system_prompt},
                 {"role": "user", "content": user_prompt}
             ]
-            
-            for chunk in self.client.stream(messages=messages, temperature=0.5, max_tokens=800):
-                yield chunk
-                
+
+            yield from self.client.stream(messages=messages, temperature=0.5, max_tokens=800)
+
         except Exception as e:
             logger.error(f"FanAssistant stream error: {str(e)}. Defaulting to simulator static stream.")
             simulated_text = StadiumSimulator.generate_demo_chat_response(user_query)
@@ -125,12 +125,12 @@ class FanAssistantChain(BaseStadiumChain):
 
 class CrowdAnalysisChain(BaseStadiumChain):
     """Orchestrates live camera/turnstile analytics, density profiling, and alert generation."""
-    
-    def analyze(self, crowd_context: Dict[str, Any]) -> CrowdAnalysisResult:
+
+    def analyze(self, crowd_context: dict[str, Any]) -> CrowdAnalysisResult:
         def fallback():
             scenario = StadiumSimulator.get_active_scenario()
             alerts = crowd_context.get("alerts", [])
-            
+
             # Determine mock risk levels and alerts depending on active scenario
             if "Critical Emergency" in scenario:
                 rec = "Evacuate Sector 205 Level 2 concourse foyer immediately. Divert all unassigned volunteers to assist ADA stairs."
@@ -187,11 +187,11 @@ class CrowdAnalysisChain(BaseStadiumChain):
 
 class AccessibilityChain(BaseStadiumChain):
     """Produces customized mobility route narrations and schedules helper assignments."""
-    
-    def generate_route(self, service_type: str, current_location: str, destination: str, context: Dict[str, Any]) -> AccessibilityRouteResult:
+
+    def generate_route(self, service_type: str, current_location: str, destination: str, context: dict[str, Any]) -> AccessibilityRouteResult:
         def fallback():
             scenario = StadiumSimulator.get_active_scenario()
-            
+
             # Formulate route specifics tailored to service_type
             if "Wheelchair" in service_type:
                 steps = [
@@ -274,11 +274,11 @@ class AccessibilityChain(BaseStadiumChain):
 
 class TransportChain(BaseStadiumChain):
     """Determines multi-modal transit recommendation schedules to dispatch matchday traffic."""
-    
-    def get_recommendation(self, sector_id: str, destination_zone: str, context: Dict[str, Any]) -> TransportnexusResult:
+
+    def get_recommendation(self, sector_id: str, destination_zone: str, context: dict[str, Any]) -> TransportnexusResult:
         def fallback():
             scenario = StadiumSimulator.get_active_scenario()
-            
+
             # Setup dynamic travel times depending on active scenario
             if "After Match" in scenario:
                 metro_time, bus_time, taxi_time = 18, 35, 55
@@ -335,11 +335,11 @@ class TransportChain(BaseStadiumChain):
 
 class SustainabilityChain(BaseStadiumChain):
     """Incentivizes fan-recycling and optimizes general operator power grids."""
-    
-    def monitor_utilities(self, context: Dict[str, Any]) -> SustainabilityResult:
+
+    def monitor_utilities(self, context: dict[str, Any]) -> SustainabilityResult:
         def fallback():
             scenario = StadiumSimulator.get_active_scenario()
-            
+
             # Dynamic solar generation and HVAC recommendations based on scenario
             if "Halftime" in scenario:
                 grid = "Loaded"
@@ -389,12 +389,12 @@ class SustainabilityChain(BaseStadiumChain):
 
 class OpsCommandChain(BaseStadiumChain):
     """Performs priority classification on logged incidents and creates shift briefings."""
-    
-    def manage_incident(self, incident_report: str, zone_location: str, reporter_type: str, context: Dict[str, Any]) -> OperationsCommandResult:
+
+    def manage_incident(self, incident_report: str, zone_location: str, reporter_type: str, context: dict[str, Any]) -> OperationsCommandResult:
         def fallback():
             # Determine priority classification and categories programmatically
             rep_lower = incident_report.lower()
-            
+
             # Determine incident classification and priority level
             if any(w in rep_lower for w in ["fire", "smoke", "burn"]):
                 cat = "Security"
@@ -458,7 +458,7 @@ class OpsCommandChain(BaseStadiumChain):
                 alt_rec = "Provide fan with temporary seat assignment."
 
             return {
-                "incident_id": "INC-" + str(os.getpid() % 1000 + random.randint(100, 999)),
+                "incident_id": "INC-" + str(os.getpid() % 1000 + random.randint(100, 999)),  # nosec B311 - cosmetic demo ID, not security-sensitive
                 "classification_category": cat,
                 "priority_level": p_level,
                 "closest_volunteer_sector": v_sector,

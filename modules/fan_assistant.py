@@ -1,13 +1,15 @@
 import streamlit as st
+
 from services.llm_chain import FanAssistantChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
+from services.utils import apply_accessibility_filters, render_html, render_status_badge
+
 
 def render_fan_assistant() -> None:
     """Renders the official multi-lingual Fan Assistant chatbot module."""
     # Apply global accessibility modes
     apply_accessibility_filters()
-    
+
     render_html(
         """
         <div style="margin-bottom: 25px;">
@@ -18,10 +20,10 @@ def render_fan_assistant() -> None:
         </div>
         """
     )
-    
+
     # 1. Main visual split: Left sidebar column for Context & Suggested Actions, Right for Conversation
     col1, col2 = st.columns([1, 2.2], gap="large")
-    
+
     with col1:
         # Multilingual selector at the top
         st.markdown("### 🌐 Select Assistant Language")
@@ -40,12 +42,12 @@ def render_fan_assistant() -> None:
             index=0
         )
         st.session_state.selected_language = selected_language
-        
+
         st.markdown("### 🏟️ Stadium Live Status")
-        
+
         # Load simulated context for the side widget
         status_text = StadiumSimulator.get_stadium_context()
-        
+
         render_html(
             f"""
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px; margin-bottom: 20px;">
@@ -59,10 +61,10 @@ def render_fan_assistant() -> None:
             </div>
             """
         )
-        
+
         st.markdown("### 💡 Quick Actions")
         st.caption("Click any preset query below to instantly route to StadiumIQ:")
-        
+
         # Adjust preset names based on language selection
         if "Español" in selected_language:
             presets = [
@@ -96,23 +98,23 @@ def render_fan_assistant() -> None:
                 "🎟️ My mobile ticket won't scan!",
                 "🚨 Medical Emergency near Sector 112"
             ]
-        
+
         # Create small styled prompt buttons
         preset_clicked = None
         for preset in presets:
             if st.button(preset, use_container_width=True, key=f"preset_{preset}"):
                 preset_clicked = preset[2:]  # Strip icon
-                
+
     with col2:
         st.markdown("### 🗣️ Multi-Lingual Intelligence Portal")
-        
+
         # Instantiate chain
         chain = FanAssistantChain()
-        
+
         # Initialize conversation state if empty
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
-            
+
         # Draw previous chats
         chat_container = st.container(height=450, border=True)
         with chat_container:
@@ -132,36 +134,36 @@ def render_fan_assistant() -> None:
                 for msg in st.session_state.chat_history:
                     with st.chat_message(msg["role"]):
                         st.markdown(msg["content"])
-                        
+
         # Handle message input
         user_input = st.chat_input("Ask StadiumIQ (e.g. 'Where is restroom Level 1 East?')")
-        
+
         # Force submit if quick action was clicked
         if preset_clicked:
             user_input = preset_clicked
- 
+
         if user_input:
             # 1. Show user message instantly
             with chat_container:
                 with st.chat_message("user"):
                     st.markdown(user_input)
-            
+
             # 2. Add user turn to session state history
             st.session_state.chat_history.append({"role": "user", "content": user_input})
-            
+
             # 3. Stream AI answer
             with chat_container:
                 with st.chat_message("assistant"):
                     response_placeholder = st.empty()
-                    
+
                     # Construct serialized memory history
                     from services.memory import ConversationMemory
                     mem = ConversationMemory()
                     history_str = mem.get_history(st.session_state.chat_history[:-1])
-                    
+
                     # Prepend selected language constraint directly into user_query
                     lang_query = f"[User preferred conversation language: {selected_language}] {user_input}"
-                    
+
                     # Generate streaming output tokens
                     full_response = ""
                     for token in chain.run_streaming(
@@ -171,14 +173,14 @@ def render_fan_assistant() -> None:
                     ):
                         full_response += token
                         response_placeholder.markdown(full_response + "▌")
-                    
+
                     # Render complete clean markdown output
                     response_placeholder.markdown(full_response)
-                    
+
             # 4. Save response to state and rerun to preserve display
             st.session_state.chat_history.append({"role": "assistant", "content": full_response})
             st.rerun()
- 
+
         # Clear Conversation Button
         if st.session_state.chat_history:
             c1, c2 = st.columns([3, 1])

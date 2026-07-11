@@ -1,15 +1,17 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
+
+from models.schemas import TransportnexusResult
 from services.llm_chain import TransportChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
-from models.schemas import TransportnexusResult
+from services.utils import apply_accessibility_filters, render_html, render_status_badge
+
 
 def render_transport_nexus() -> None:
     """Renders the Transport Nexus transit orchestration system."""
     apply_accessibility_filters()
-    
+
     render_html(
         """
         <div style="margin-bottom: 25px;">
@@ -20,24 +22,24 @@ def render_transport_nexus() -> None:
         </div>
         """
     )
-    
+
     # 1. Fetch transport simulation context
     trans_context = StadiumSimulator.get_transport_context()
-    
+
     # 2. Main columns layout: Input/Controls & Lot Occupancy Left, Dynamic Recommendation Right
     col1, col2 = st.columns([1.1, 1.9], gap="medium")
-    
+
     with col1:
         st.markdown("### 🗺️ Live Dispatch Terminal")
         st.caption("Enter fan seat sector and destination zone:")
-        
+
         sector_id = st.selectbox("Current Seating Sector (e.g. Sector 114):", ["114", "202", "305", "VIP Suite B"])
         destination_zone = st.text_input("Destination Zone / Regional Hub:", value="Central Station (Downtown Hub)")
-        
+
         trigger_search = st.button("🗺️ Compute Optimized Transit Path", type="primary", use_container_width=True)
-        
+
         st.markdown("---")
-        
+
         st.markdown("### 🅿️ Parking Lot Occupancy")
         for lot in trans_context["parking_lots"]:
             badge_type = "critical" if "FULL" in lot["recommendation"] else "active"
@@ -52,11 +54,11 @@ def render_transport_nexus() -> None:
                 </div>
                 """
             )
-            
+
     with col2:
         if trigger_search:
             st.markdown("### 💡 StadiumIQ Smart Transit Recommendations")
-            
+
             # Fire chain
             chain = TransportChain()
             with st.spinner("Crunching post-match transit timelines..."):
@@ -65,7 +67,7 @@ def render_transport_nexus() -> None:
                     destination_zone=destination_zone,
                     context=trans_context
                 )
-                
+
             # Render best transit choice
             render_html(
                 f"""
@@ -76,14 +78,14 @@ def render_transport_nexus() -> None:
                 </div>
                 """
             )
-            
+
             # Show multi-transit options
             st.markdown("#### Travel Option Alternatives Comparison:")
-            
+
             # Convert list of Pydantic models to Pandas dataframe for quick chart render
             raw_options = [opt.model_dump() for opt in result.all_transit_options]
             df_opt = pd.DataFrame(raw_options)
-            
+
             # Display custom table
             for opt in result.all_transit_options:
                 con_color = "low" if opt.congestion_level == "Low" else ("warning" if opt.congestion_level == "Medium" else "critical")
@@ -100,10 +102,10 @@ def render_transport_nexus() -> None:
                     </div>
                     """
                 )
-                
+
             st.markdown("<br/>", unsafe_allow_html=True)
             st.markdown("#### 📊 Alternate Routes: Travel Time vs. CO2 Footprint")
-            
+
             # Draw Comparison bar chart using Plotly Express
             fig = px.bar(
                 df_opt,
@@ -123,7 +125,7 @@ def render_transport_nexus() -> None:
                 margin=dict(l=10, r=10, t=40, b=10)
             )
             st.plotly_chart(fig, use_container_width=True)
-            
+
             # Dispatch guide
             st.markdown("<br/>", unsafe_allow_html=True)
             render_html(
@@ -134,12 +136,12 @@ def render_transport_nexus() -> None:
                 </div>
                 """
             )
-            
+
             # 4. Explainable AI Section
             st.markdown("---")
             st.markdown("### 🔍 Explainable Dispatch Analytics")
             st.caption("AI-justified transit scheduling models and safety constraints:")
-            
+
             x_col1, x_col2 = st.columns(2)
             with x_col1:
                 render_html(
@@ -165,12 +167,12 @@ def render_transport_nexus() -> None:
                     </div>
                     """
                 )
-                
+
         else:
             # Render general live shuttle schedules
             st.markdown("### 🚌 Real-Time Charter Shuttle Timelines")
             shuttles = trans_context["shuttle_bus"]
-            
+
             sc1, sc2 = st.columns(2)
             with sc1:
                 render_html(
@@ -192,7 +194,7 @@ def render_transport_nexus() -> None:
                     </div>
                     """
                 )
-                
+
             render_html(
                 """
                 <div style="border: 1px dashed rgba(255,255,255,0.1); padding: 30px; border-radius: 12px; text-align: center; color: rgba(255,255,255,0.4); margin-top: 30px;">

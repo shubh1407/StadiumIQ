@@ -1,14 +1,16 @@
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
+
 from services.llm_chain import CrowdAnalysisChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
+from services.utils import apply_accessibility_filters, render_html, render_status_badge
+
 
 def render_crowd_intelligence() -> None:
     """Renders the Crowd Intelligence safety orchestration suite."""
     apply_accessibility_filters()
-    
+
     render_html(
         """
         <div style="margin-bottom: 25px;">
@@ -19,17 +21,17 @@ def render_crowd_intelligence() -> None:
         </div>
         """
     )
-    
+
     # 1. Fetch live contextual parameters
     raw_crowd_data = StadiumSimulator.get_crowd_context()
     active_scenario = StadiumSimulator.get_active_scenario()
-    
+
     # Run the intelligence chain to get parsed decisions (supports seamless demo fallback)
     if "cached_crowd_analysis" not in st.session_state:
         chain = CrowdAnalysisChain()
         with st.spinner("Analyzing high-frequency camera frames..."):
             st.session_state.cached_crowd_analysis = chain.analyze(raw_crowd_data)
-            
+
     analysis = st.session_state.cached_crowd_analysis
 
     # Refresh panel for on-demand intelligence updates
@@ -39,7 +41,7 @@ def render_crowd_intelligence() -> None:
             if "cached_crowd_analysis" in st.session_state:
                 del st.session_state.cached_crowd_analysis
             st.rerun()
-        
+
     # 2. Key metrics display row
     m_col1, m_col2, m_col3, m_col4 = st.columns(4)
     with m_col1:
@@ -63,23 +65,23 @@ def render_crowd_intelligence() -> None:
 
     # 3. Main content split: Left = Spatial Map & Predictive AI, Right = Bottlenecks & Explainable AI
     col1, col2 = st.columns([1.8, 1.2], gap="large")
-    
+
     with col1:
         st.markdown("### 🗺️ Live Crowd Distribution Heatmap")
-        
+
         # Generate simulated spatial coordinates for MetLife Stadium zones
         zones = ["Plaza-North", "Plaza-East", "Gate-A-Foyer", "Gate-B-Ingress", "Sector-112-Ramp", "Sector-205-Concourse", "VIP-Suites-Level-2"]
         x_coords = [10, 20, 30, 40, 25, 15, 35]
         y_coords = [15, 25, 12, 38, 42, 10, 22]
         densities = [3.2, 5.1, 4.4, 8.7, 7.6, 2.1, 1.8] if "Before Match" in active_scenario else [8.1, 7.5, 2.1, 1.5, 6.2, 9.4, 4.8]
-        
+
         df_heatmap = pd.DataFrame({
             "Stadium Sector/Zone": zones,
             "X Position": x_coords,
             "Y Position": y_coords,
             "Crowd Density (0-10)": densities
         })
-        
+
         # Plotly Scatter Density Bubble Map
         fig = px.scatter(
             df_heatmap,
@@ -102,11 +104,11 @@ def render_crowd_intelligence() -> None:
             margin=dict(l=20, r=20, t=10, b=10)
         )
         st.plotly_chart(fig, use_container_width=True)
-        
+
         # Predictive AI Gate Flow Section
         st.markdown("### 🔮 Predictive Flow Intelligence Panel (15m/30m/60m Projections)")
         st.caption("Active neural-flow models predicting bottleneck probabilities across core turnstiles:")
-        
+
         # Formulate dynamic predictive metrics based on active scenario
         if "Before Match" in active_scenario:
             pred_data = [
@@ -179,10 +181,10 @@ def render_crowd_intelligence() -> None:
         # Render AI warning boxes
         for alert in analysis.system_alerts:
             st.warning(alert)
-            
+
         st.markdown("### 🚧 Segmented Concourse Congestion")
         st.caption("Active monitoring of localized sectors:")
-        
+
         for bn in analysis.active_bottlenecks:
             # Map status colors
             bar_color = "red" if bn.status == "Critical" else ("orange" if bn.status == "Warning" else "green")
@@ -211,7 +213,7 @@ def render_crowd_intelligence() -> None:
                 </div>
                 """
             )
-            
+
         # Simulated manual alert broadcast trigger
         if st.button("📢 Broadcast Alert to Field Volunteers", type="primary", use_container_width=True):
             st.toast("Security bulletins broadcasted successfully to Sector 112 UHF radios!", icon="🚨")
@@ -220,7 +222,7 @@ def render_crowd_intelligence() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Explainable AI (XAI) Safety Analysis")
     st.caption("To establish complete operational trust, the AI explains the underlying parameters and fallbacks supporting this safety calculation:")
-    
+
     xai_col1, xai_col2 = st.columns(2)
     with xai_col1:
         render_html(

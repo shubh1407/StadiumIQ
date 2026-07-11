@@ -1,14 +1,17 @@
-import streamlit as st
 import time
+
+import streamlit as st
+
+from models.schemas import OperationsCommandResult
 from services.llm_chain import OpsCommandChain
 from services.simulator import StadiumSimulator
-from services.utils import render_status_badge, apply_accessibility_filters, render_html
-from models.schemas import OperationsCommandResult
+from services.utils import apply_accessibility_filters, render_html, render_status_badge
+
 
 def render_operations_command() -> None:
     """Renders the Operations Command control board & Real-Time AI Situation Room."""
     apply_accessibility_filters()
-    
+
     render_html(
         """
         <div style="margin-bottom: 25px;">
@@ -19,26 +22,26 @@ def render_operations_command() -> None:
         </div>
         """
     )
-    
+
     # Fetch active simulation context
     active_scenario = StadiumSimulator.get_active_scenario()
     ops_context = StadiumSimulator.get_operations_context()
     crowd_context = StadiumSimulator.get_crowd_context()
-    
+
     # Initialize active logged incidents database if empty
     if "incident_database" not in st.session_state:
         st.session_state.incident_database = list(ops_context.get("active_incidents", []))
-        
+
     # Create the beautiful dual-tab structure
     tab1, tab2 = st.tabs(["📊 Real-Time AI Situation Room", "🛡️ Incident Dispatch & Log Center"])
-    
+
     # ==========================================================================
     # TAB 1: REAL-TIME AI SITUATION ROOM (8 Core Parameters)
     # ==========================================================================
     with tab1:
         st.markdown("### 📡 Live Multi-System Tactical Matrix")
         st.caption(f"Continuous high-frequency synchronization with MetLife Stadium sensors under the **{active_scenario}** phase:")
-        
+
         # Formulate dynamic indicators depending on the scenario
         # 1. Crowd
         if "Before Match" in active_scenario:
@@ -51,7 +54,7 @@ def render_operations_command() -> None:
             crowd_val, crowd_badge, crowd_desc = "9.7 / 10 Index", "Red", "Covered concourse pod overcrowding"
         else: # Emergency
             crowd_val, crowd_badge, crowd_desc = "9.9 / 10 Index", "Red", "Local Sector 205 evacuation in progress"
-            
+
         # 2. Transport
         if "Before Match" in active_scenario:
             trans_val, trans_badge, trans_desc = "3m Red Line Frequency", "Green", "Extra transit trains running smoothly"
@@ -146,7 +149,7 @@ def render_operations_command() -> None:
                 <div style="font-size: 1.25rem; font-weight: bold; color: #FFFFFF; margin-bottom: 4px;">{crowd_val}</div>
                 <div style="font-size: 0.75rem; color: #E0E1DD; line-height: 1.3;">{crowd_desc}</div>
             </div>
-            
+
             <!-- CARD 2: TRANSPORT -->
             <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 15px; transition: all 0.25s;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
@@ -219,11 +222,11 @@ def render_operations_command() -> None:
         </div>
         """
         render_html(grid_html)
-        
+
         # AI Executive Tactical Summary
         st.markdown("### 📋 AI Executive Tactical Command Briefing")
         st.caption("Synthesized general operational directive compiled across all eight systems:")
-        
+
         if "Before Match" in active_scenario:
             brief_text = (
                 "**INBOUND CONGESTION WARNING**: Gates turnstiles are highly loaded due to fan arrivals. Gate B represents the primary bottleneck at 72% current and 96% projected 15m density. "
@@ -250,7 +253,7 @@ def render_operations_command() -> None:
                 "**CRITICAL SECURITY RESPONSE**: Fire alarm triggered at Sector 205 Level 2 concourse foyer. Evacuation protocols are active for this sector; redirect all available sector 112 hosts to support. "
                 "Gates are bypassed; Metro Red Line has shifted to 1m rapid emergency extraction. All concession power has been shed to protect infrastructure. EMS is focused at the Sector 205 evacuation point."
             )
-            
+
         render_html(
             f"""
             <div style="background: rgba(0, 255, 204, 0.05); border-left: 4px solid #00FFCC; border-radius: 8px; padding: 18px; line-height: 1.5; font-size: 0.9rem; color: #E0E1DD; margin-bottom: 20px;">
@@ -258,7 +261,7 @@ def render_operations_command() -> None:
             </div>
             """
         )
-        
+
         # Button to re-verify systems
         if st.button("🩺 Trigger Complete Multi-System Self-Check", use_container_width=True):
             with st.spinner("Pinging stadium IoT nodes, cameras, and grid relays..."):
@@ -270,25 +273,25 @@ def render_operations_command() -> None:
     # ==========================================================================
     with tab2:
         col1, col2 = st.columns([1.2, 1.8], gap="medium")
-        
+
         with col1:
             st.markdown("### 📝 Log New Stadium Incident")
             st.caption("Submit active field reports for instant AI triage and dispatch:")
-            
+
             reporter_type = st.selectbox(
                 "Reporter Personnel:",
                 ["Field Volunteer (Neon Jersey)", "Stadium Security Patrol", "Gate Scanner Operator", "General Fan Report"]
             )
-            
+
             zone_location = st.text_input("Coordinates / Zone Location:", value="Sector 205 Concourse Level 2")
-            
+
             incident_report = st.text_area(
                 "Incident Description:",
                 placeholder="e.g. Broken glass spill blocking step-free corridor, need immediate cleaning dispatch."
             )
-            
+
             submit_incident = st.button("🚀 Dispatch AI Emergency Response", type="primary", use_container_width=True)
-            
+
             if submit_incident:
                 if not incident_report.strip():
                     st.error("Please enter descriptive incident details before dispatch.")
@@ -302,7 +305,7 @@ def render_operations_command() -> None:
                             reporter_type=reporter_type,
                             context=ops_context
                         )
-                    
+
                     # Append incident log to our persistent session-state database
                     st.session_state.incident_database.insert(0, {
                         "id": result.incident_id,
@@ -311,7 +314,7 @@ def render_operations_command() -> None:
                         "location": zone_location,
                         "status": "Assigned"
                     })
-                    
+
                     # Show beautiful fully enriched dispatch card
                     st.markdown("---")
                     st.markdown("### 📡 Active AI Dispatch & Triage Directive")
@@ -326,7 +329,7 @@ def render_operations_command() -> None:
                             <p style="color: #FFFFFF; font-size: 0.85rem; font-weight: 600; margin: 5px 0;">
                                 📍 Category: {result.classification_category} Incident logged at {zone_location}
                             </p>
-                            
+
                             <!-- Real-Time Incident Triage Parameters -->
                             <div style="background: rgba(0,0,0,0.25); border-radius: 6px; padding: 10px; margin: 10px 0; font-size: 0.8rem; line-height: 1.5; color: #E0E1DD;">
                                 <strong>Impact Assessment:</strong> {result.impact_assessment}<br/>
@@ -335,7 +338,7 @@ def render_operations_command() -> None:
                                 <strong style="color: #FF5252;">Medical Allocation:</strong> {result.medical_team_dispatch}<br/>
                                 <strong>Est. Resolution Time:</strong> <span style="color: #FFEE58; font-weight: bold;">{result.estimated_resolution_time}</span>
                             </div>
-                            
+
                             <p style="color: #E0E1DD; font-size: 0.8rem; margin: 10px 0 0 0; line-height: 1.4;">
                                 <strong>Playbook Directives:</strong> {result.incident_response_playbook}
                             </p>
@@ -345,7 +348,7 @@ def render_operations_command() -> None:
                         </div>
                         """
                     )
-                    
+
                     # Explainable AI on Incident Logging
                     render_html(
                         f"""
@@ -353,7 +356,7 @@ def render_operations_command() -> None:
                             <strong style="color: #00FFCC; font-size: 0.8rem;">🎯 Security Dispatch Explainability</strong>
                             <p style="color: #A0C4FF; margin: 4px 0 0 0; line-height: 1.3;">
                                 <strong>Rationale:</strong> {result.reason}<br/>
-                                <strong>Calculated Severity Confidence:</strong> {result.confidence_score}% • 
+                                <strong>Calculated Severity Confidence:</strong> {result.confidence_score}% •
                                 <strong>Expected Mitigation Impact:</strong> {result.expected_impact}<br/>
                                 <strong style="color: #FFEE58;">Alternate Response Unit:</strong> {result.alternative_recommendation}
                             </p>
@@ -365,7 +368,7 @@ def render_operations_command() -> None:
         with col2:
             st.markdown("### 📋 Active Incident Monitoring Queue")
             st.caption("Live ticket triage backlog from command control:")
-            
+
             # Draw current incidents list
             for inc in st.session_state.incident_database:
                 p_badge = "critical" if inc["priority"] in ["High", "Critical"] else ("warning" if inc["priority"] == "Medium" else "low")
@@ -382,7 +385,7 @@ def render_operations_command() -> None:
                     </div>
                     """
                 )
-                
+
             # Complete simulation incident clearing
             if st.session_state.incident_database:
                 if st.button("🧹 Clear Completed Incidents Feed"):
@@ -395,11 +398,11 @@ def render_operations_command() -> None:
             st.markdown("<br/>", unsafe_allow_html=True)
             st.markdown("### 📑 AI Pre-Shift Shift Briefing Compiler")
             st.caption("Synthesizes a cohesive briefings bulletin to align security teams and volunteers:")
-            
+
             if st.button("📝 Compile Current Shift Briefing Sheet", type="secondary", use_container_width=True):
                 with st.spinner("Analyzing active game-logs, queue indices, and transit grids..."):
                     time.sleep(1.5)
-                    
+
                     render_html(
                         f"""
                         <div style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; font-family: 'Courier New', Courier, monospace;">

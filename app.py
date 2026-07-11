@@ -1,5 +1,6 @@
-import streamlit as st
 import os
+
+import streamlit as st
 from dotenv import load_dotenv
 from streamlit_option_menu import option_menu
 
@@ -18,7 +19,7 @@ st.set_page_config(
 def load_custom_css():
     css_path = os.path.join(os.path.dirname(__file__), "assets", "styles.css")
     if os.path.exists(css_path):
-        with open(css_path, "r", encoding="utf-8") as f:
+        with open(css_path, encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     else:
         # Fallback styles
@@ -90,9 +91,9 @@ def render_sidebar():
             """,
             unsafe_allow_html=True,
         )
-        
+
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1); margin-top: 10px; margin-bottom: 15px;' />", unsafe_allow_html=True)
-        
+
         # Navigation option menu
         selected = option_menu(
             menu_title="Intelligence Suites",
@@ -134,13 +135,13 @@ def render_sidebar():
                 }
             }
         )
-        
+
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1);' />", unsafe_allow_html=True)
-        
+
         # 🎮 Live Simulation Controller
         st.markdown("### 🎮 Live Simulation Controller")
         st.caption("Alter stadium-wide state variables instantly:")
-        
+
         scenarios = [
             "🎟️ Before Match (High Entry Crowd)",
             "🍔 Halftime (Food Court Rush)",
@@ -148,22 +149,22 @@ def render_sidebar():
             "⛈️ Sudden Weather Shift (Rain/Storm)",
             "🚨 Critical Emergency Event"
         ]
-        
+
         if "stadium_scenario" not in st.session_state:
             st.session_state.stadium_scenario = "🎟️ Before Match (High Entry Crowd)"
-            
+
         try:
             default_idx = scenarios.index(st.session_state.stadium_scenario)
         except ValueError:
             default_idx = 0
-            
+
         scenario_select = st.sidebar.radio(
             "Select Stadium Phase:",
             scenarios,
             index=default_idx,
             key="stadium_scenario_selector"
         )
-        
+
         if scenario_select != st.session_state.stadium_scenario:
             st.session_state.stadium_scenario = scenario_select
             # Clear analysis caches so models are forced to evaluate the new context in real-time
@@ -173,44 +174,44 @@ def render_sidebar():
                 del st.session_state.cached_sustainability_result
             st.toast(f"Stadium transitioned to: {scenario_select.split(' ', 1)[1]}!", icon="🔄")
             st.rerun()
-            
+
         st.markdown("<hr style='border-color: rgba(255, 255, 255, 0.1);' />", unsafe_allow_html=True)
-        
+
     return selected
 
 def main():
     load_custom_css()
     init_session_states()
-    
+
     selected_module = render_sidebar()
     st.session_state.current_module = selected_module
-    
+
     # Render correct module view dynamically with defensive import guards
     try:
         if selected_module == "Fan Assistant":
             from modules.fan_assistant import render_fan_assistant
             render_fan_assistant()
-            
+
         elif selected_module == "Crowd Intelligence":
             from modules.crowd import render_crowd_intelligence
             render_crowd_intelligence()
-            
+
         elif selected_module == "Accessibility Hub":
             from modules.accessibility import render_accessibility_hub
             render_accessibility_hub()
-            
+
         elif selected_module == "Transport Nexus":
             from modules.transport import render_transport_nexus
             render_transport_nexus()
-            
+
         elif selected_module == "Sustainability Monitor":
             from modules.sustainability import render_sustainability_monitor
             render_sustainability_monitor()
-            
+
         elif selected_module == "Operations Command":
             from modules.operations import render_operations_command
             render_operations_command()
-            
+
     except ImportError as e:
         # Fallback view for uncompleted files so the application remains runnable at each step
         st.markdown(f"### ⚙️ Module '{selected_module}' is currently loading...")

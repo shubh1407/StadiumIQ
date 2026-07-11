@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 def inject_glassmorphic_card(title: str, content_html: str, border_color: str = "rgba(255, 255, 255, 0.1)") -> None:
     """Renders a beautiful glassmorphic container with custom inner HTML contents."""
     card_style = f"""
@@ -41,7 +42,7 @@ def render_status_badge(label: str, status_type: str) -> str:
         "stable": {"bg": "rgba(0, 188, 212, 0.15)", "text": "#26C6DA", "border": "rgba(0, 188, 212, 0.4)"},
     }
     cfg = colors.get(status_type.lower(), {"bg": "rgba(255,255,255,0.08)", "text": "#E0E1DD", "border": "rgba(255,255,255,0.2)"})
-    
+
     return f'<span style="background-color: {cfg["bg"]}; color: {cfg["text"]}; border: 1px solid {cfg["border"]}; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; letter-spacing: 0.5px;">{label}</span>'
 
 def apply_accessibility_filters() -> None:

@@ -1,29 +1,32 @@
 import os
+
 import pytest
 from pydantic import BaseModel, Field
 
+from models.schemas import (
+    AccessibilityRouteResult,
+    BottleneckZone,
+    CrowdAnalysisResult,
+    OperationsCommandResult,
+    SustainabilityResult,
+    TransportnexusResult,
+)
+
 # Ensure correct PYTHONPATH and system keys
 from services.groq_client import GroqClient
-from services.simulator import StadiumSimulator
-from services.output_parser import OutputParser
-from services.memory import ConversationMemory
-from services.utils import render_status_badge
 from services.llm_chain import (
-    FanAssistantChain,
-    CrowdAnalysisChain,
     AccessibilityChain,
-    TransportChain,
+    CrowdAnalysisChain,
+    FanAssistantChain,
+    OpsCommandChain,
     SustainabilityChain,
-    OpsCommandChain
+    TransportChain,
 )
-from models.schemas import (
-    CrowdAnalysisResult,
-    AccessibilityRouteResult,
-    TransportnexusResult,
-    SustainabilityResult,
-    OperationsCommandResult,
-    BottleneckZone
-)
+from services.memory import ConversationMemory
+from services.output_parser import OutputParser
+from services.simulator import StadiumSimulator
+from services.utils import render_status_badge
+
 
 class MockResponseModel(BaseModel):
     test_key: str = Field(description="A mock verification parameter")
@@ -34,7 +37,7 @@ def test_simulator_payloads() -> None:
     st_context = StadiumSimulator.get_stadium_context()
     assert isinstance(st_context, str)
     assert "Gate Statuses" in st_context
-    
+
     crowd_context = StadiumSimulator.get_crowd_context()
     assert isinstance(crowd_context, dict)
     assert "bottleneck_zones" in crowd_context
@@ -66,7 +69,7 @@ def test_output_parser_json_extraction() -> None:
         "```\n\n"
         "Let me know if you need physical volunteer dispatches."
     )
-    
+
     parsed = OutputParser.parse_to_model(raw_markdown, MockResponseModel)
     assert parsed.test_key == "StadiumIQ OK"
     assert parsed.status_score == 98
@@ -81,18 +84,55 @@ def test_groq_client_init() -> None:
     empty_client = GroqClient(api_key="")
     assert empty_client.is_active is (bool(os.getenv("GROQ_API_KEY")))
 
+def test_conversation_memory_history_and_trimming() -> None:
+    """Verifies conversation memory serializes turns and trims history to max_turns."""
+    memory = ConversationMemory(max_turns=2)
+
+    assert memory.get_history([]) == "No previous conversation history. This is the first interaction."
+
+    history = [
+        {"role": "user", "content": "Where is Gate A?"},
+        {"role": "assistant", "content": "Gate A is on Level 1 East."},
+        {"role": "user", "content": "Thanks!"},
+    ]
+    serialized = memory.get_history(history)
+    assert "Fan: Thanks!" in serialized
+    assert "Where is Gate A?" not in serialized  # trimmed beyond max_turns
+
+    growing_history: list = []
+    for i in range(10):
+        memory.add_turn(growing_history, "user", f"message {i}")
+    assert len(growing_history) == memory.max_turns * 2
+
+
+def test_output_parser_raises_on_invalid_json() -> None:
+    """Verifies the output parser raises a clear error when no valid JSON can be recovered."""
+    with pytest.raises(ValueError):
+        OutputParser.parse_to_model("no json anywhere in this response", MockResponseModel)
+
+
+def test_render_status_badge_known_and_unknown_status() -> None:
+    """Verifies status badges render with the correct color for known and unknown status types."""
+    badge = render_status_badge("Critical Alert", "critical")
+    assert "Critical Alert" in badge
+    assert "#FF5252" in badge
+
+    fallback_badge = render_status_badge("Unlisted", "totally-unknown-status")
+    assert "Unlisted" in fallback_badge
+
+
 def test_fan_assistant_chain_fallback() -> None:
     """Verifies that the fan assistant chain streams properly when Groq client is inactive."""
     chain = FanAssistantChain()
     # Force client to be inactive to test the high-fidelity simulator fallback path by setting _client = None
     chain.client._client = None
-    
+
     stream_generator = chain.run_streaming(
         user_query="vegan food",
         history_buffer="No previous history",
         stadium_context="Sample context"
     )
-    
+
     tokens = list(stream_generator)
     assert len(tokens) > 0
     full_text = "".join(tokens)
@@ -103,10 +143,10 @@ def test_crowd_analysis_chain_fallback() -> None:
     """Verifies that the crowd analysis chain returns a valid CrowdAnalysisResult model in fallback mode."""
     chain = CrowdAnalysisChain()
     chain.client._client = None
-    
+
     raw_context = StadiumSimulator.get_crowd_context()
     result = chain.analyze(raw_context)
-    
+
     assert isinstance(result, CrowdAnalysisResult)
     # The simulator mock data should have overall risk level Yellow
     assert result.overall_risk_level == "Yellow"
@@ -118,7 +158,7 @@ def test_accessibility_chain_fallback() -> None:
     """Verifies that the accessibility chain produces a custom AccessibilityRouteResult model in fallback mode."""
     chain = AccessibilityChain()
     chain.client._client = None
-    
+
     raw_context = StadiumSimulator.get_accessibility_context()
     result = chain.generate_route(
         service_type="♿ Wheelchair Step-Free Guide",
@@ -126,7 +166,7 @@ def test_accessibility_chain_fallback() -> None:
         destination="Sector 112 Row K Seat 14",
         context=raw_context
     )
-    
+
     assert isinstance(result, AccessibilityRouteResult)
     assert result.service_requested == "♿ Wheelchair Step-Free Guide"
     assert any("Elevator #3" in s.instruction for s in result.navigation_steps)
@@ -138,14 +178,14 @@ def test_transport_chain_fallback() -> None:
     """Verifies that the transport chain computes transit schedules correctly in fallback mode."""
     chain = TransportChain()
     chain.client._client = None
-    
+
     raw_context = StadiumSimulator.get_transport_context()
     result = chain.get_recommendation(
         sector_id="Sector 108",
         destination_zone="Central Hub",
         context=raw_context
     )
-    
+
     assert isinstance(result, TransportnexusResult)
     assert result.origin_sector == "Sector 108"
     assert result.target_destination == "Central Hub"
@@ -158,10 +198,10 @@ def test_sustainability_chain_fallback() -> None:
     """Verifies that the sustainability chain maps power grid states and metrics in fallback mode."""
     chain = SustainabilityChain()
     chain.client._client = None
-    
+
     raw_context = StadiumSimulator.get_sustainability_context()
     result = chain.monitor_utilities(raw_context)
-    
+
     assert isinstance(result, SustainabilityResult)
     assert result.grid_power_status == "Optimal"
     assert result.carbon_offset_percentage == 38.4
@@ -172,9 +212,9 @@ def test_operations_command_chain_fallback() -> None:
     """Verifies that the operations chain prioritizes reports and produces crew briefings in fallback mode."""
     chain = OpsCommandChain()
     chain.client._client = None
-    
+
     raw_context = StadiumSimulator.get_operations_context()
-    
+
     # Test high priority mapping (due to medical dehydrated keywords)
     result_high = chain.manage_incident(
         incident_report="Faint fan dehydration issue",
@@ -185,7 +225,7 @@ def test_operations_command_chain_fallback() -> None:
     assert isinstance(result_high, OperationsCommandResult)
     assert result_high.priority_level == "High"
     assert result_high.dispatch_action_code == "CODE-RED-EMS"
-    
+
     # Test lower priority mapping
     result_med = chain.manage_incident(
         incident_report="Paper towels needed in restroom Level 1 East",
@@ -199,17 +239,17 @@ def test_operations_command_chain_fallback() -> None:
 def test_conversation_memory() -> None:
     """Verifies that ConversationMemory serializes and manages chat history buffer correctly."""
     mem = ConversationMemory(max_turns=3)
-    
+
     history = []
     assert mem.get_history(history) == "No previous conversation history. This is the first interaction."
-    
+
     mem.add_turn(history, "user", "Hello there")
     mem.add_turn(history, "assistant", "Hi, how can I help you?")
-    
+
     serialized = mem.get_history(history)
     assert "Fan: Hello there" in serialized
     assert "Assistant: Hi, how can I help you?" in serialized
-    
+
     # Exceed limit to test trim-down
     mem.add_turn(history, "user", "Query 2")
     mem.add_turn(history, "assistant", "Answer 2")
@@ -217,14 +257,14 @@ def test_conversation_memory() -> None:
     mem.add_turn(history, "assistant", "Answer 3")
     mem.add_turn(history, "user", "Query 4")
     mem.add_turn(history, "assistant", "Answer 4")
-    
+
     # History list should keep at most max_turns * 2 (which is 6 items)
     assert len(history) <= 6
 
 def test_pydantic_invalid_data() -> None:
     """Ensures that invalid data throws clear validation errors for our models."""
     from pydantic import ValidationError
-    
+
     with pytest.raises(ValidationError):
         # BottleneckZone density_index must be float, but let's try sending list
         BottleneckZone(zone_id="ZoneA", density_index=[1.2], status="Stable", flow_rate="10 people/min")
@@ -241,11 +281,11 @@ def test_groq_client_health() -> None:
     from unittest.mock import MagicMock
     client = GroqClient(api_key="gsk_test_key")
     assert client.is_active is True
-    
+
     # Mock chat completion return
     mock_completion = MagicMock()
     client._client.chat.completions.create = MagicMock(return_value=mock_completion)
-    
+
     assert client.health() is True
     client._client.chat.completions.create.assert_called_once()
 
@@ -253,14 +293,14 @@ def test_groq_client_generate() -> None:
     """Verifies the GroqClient.generate creates messages and returns text successfully."""
     from unittest.mock import MagicMock
     client = GroqClient(api_key="gsk_test_key")
-    
+
     mock_choice = MagicMock()
     mock_choice.message.content = "Mocked Response Text"
     mock_completion = MagicMock()
     mock_completion.choices = [mock_choice]
-    
+
     client._client.chat.completions.create = MagicMock(return_value=mock_completion)
-    
+
     res = client.generate(messages=[{"role": "user", "content": "Hello"}])
     assert res == "Mocked Response Text"
 
@@ -270,7 +310,7 @@ def test_base_stadium_chain_success_path() -> None:
     chain = CrowdAnalysisChain()
     chain.client.api_key = "gsk_test_key"
     chain.client._client = MagicMock()
-    
+
     # Mock response containing structured JSON conforming to CrowdAnalysisResult
     mock_choice = MagicMock()
     mock_choice.message.content = (
@@ -290,9 +330,9 @@ def test_base_stadium_chain_success_path() -> None:
     )
     mock_completion = MagicMock()
     mock_completion.choices = [mock_choice]
-    
+
     chain.client._client.chat.completions.create = MagicMock(return_value=mock_completion)
-    
+
     result = chain.analyze(crowd_context={})
     assert isinstance(result, CrowdAnalysisResult)
     assert result.overall_risk_level == "Green"
@@ -305,10 +345,10 @@ def test_base_stadium_chain_exception_path() -> None:
     chain = CrowdAnalysisChain()
     chain.client.api_key = "gsk_test_key"
     chain.client._client = MagicMock()
-    
+
     # Force exception during create call
     chain.client._client.chat.completions.create.side_effect = Exception("Groq connection timeout")
-    
+
     # Should fall back to the fallback_func gracefully
     result = chain.analyze(crowd_context={})
     assert isinstance(result, CrowdAnalysisResult)
@@ -321,32 +361,34 @@ def test_fan_assistant_chain_streaming_active() -> None:
     chain = FanAssistantChain()
     chain.client.api_key = "gsk_test_key"
     chain.client._client = MagicMock()
-    
+
     # Mock chunks
     mock_chunk1 = MagicMock()
     mock_chunk1.choices = [MagicMock()]
     mock_chunk1.choices[0].delta.content = "Hello "
-    
+
     mock_chunk2 = MagicMock()
     mock_chunk2.choices = [MagicMock()]
     mock_chunk2.choices[0].delta.content = "world!"
-    
+
     chain.client._client.chat.completions.create = MagicMock(return_value=[mock_chunk1, mock_chunk2])
-    
+
     tokens = list(chain.run_streaming(
         user_query="hi",
         history_buffer="no history",
         stadium_context="stadium OK"
     ))
-    
+
     assert tokens == ["Hello ", "world!"]
 
 def test_utils_render_html() -> None:
     """Verifies that render_html strips indentation and passes correctly to st.markdown."""
-    from services.utils import render_html
-    import streamlit as st
     from unittest.mock import MagicMock
-    
+
+    import streamlit as st
+
+    from services.utils import render_html
+
     original_markdown = st.markdown
     st.markdown = MagicMock()
     try:

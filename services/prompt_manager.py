@@ -1,4 +1,5 @@
-from typing import Dict, Any, Optional
+from typing import Any
+
 
 class PromptTemplate:
     """
@@ -9,8 +10,8 @@ class PromptTemplate:
         self,
         system_prompt: str,
         template_text: str,
-        constraints: Optional[list[str]] = None,
-        examples: Optional[list[Dict[str, str]]] = None
+        constraints: list[str] | None = None,
+        examples: list[dict[str, str]] | None = None
     ) -> None:
         self.system_prompt = system_prompt
         self.template_text = template_text
@@ -25,9 +26,9 @@ class PromptTemplate:
             formatted_examples = "\n\n### FEW-SHOT EXAMPLES:\n" + "\n".join(
                 f"User: {ex['user']}\nAssistant: {ex['assistant']}" for ex in self.examples
             )
-        
+
         main_prompt = self.template_text.format(**kwargs)
-        
+
         return f"{main_prompt}\n\n### MANDATORY SYSTEM CONSTRAINTS:\n{constraints_str}{formatted_examples}"
 
 
@@ -35,7 +36,7 @@ class PromptTemplate:
 # Central Prompt Registry for StadiumIQ
 # ==============================================================================
 
-PROMPTS: Dict[str, PromptTemplate] = {
+PROMPTS: dict[str, PromptTemplate] = {
     # --------------------------------------------------------------------------
     # 1. FAN ASSISTANT
     # --------------------------------------------------------------------------

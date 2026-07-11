@@ -1,4 +1,5 @@
-from typing import Dict, Any, List
+from typing import Any
+
 
 class StadiumSimulator:
     """
@@ -69,7 +70,7 @@ class StadiumSimulator:
         return "- Stadium operational status stable."
 
     @classmethod
-    def get_crowd_context(cls) -> Dict[str, Any]:
+    def get_crowd_context(cls) -> dict[str, Any]:
         """Generates structured crowd distribution and safety hazard tracking data based on active scenario."""
         scenario = cls.get_active_scenario()
 
@@ -181,7 +182,7 @@ class StadiumSimulator:
         return {"overall_occupancy_pct": 50.0, "total_fans_in_stadium": 40000, "risk_level": "Green", "bottleneck_zones": [], "alerts": [], "historical_trends": []}
 
     @classmethod
-    def get_accessibility_context(cls) -> Dict[str, Any]:
+    def get_accessibility_context(cls) -> dict[str, Any]:
         """Provides status updates on ADA amenities and companions on-site based on scenario."""
         scenario = cls.get_active_scenario()
 
@@ -208,7 +209,7 @@ class StadiumSimulator:
         return base_context
 
     @classmethod
-    def get_transport_context(cls) -> Dict[str, Any]:
+    def get_transport_context(cls) -> dict[str, Any]:
         """Tracks live status of subway rail systems, shuttle loops, parking and rideshares."""
         scenario = cls.get_active_scenario()
 
@@ -336,7 +337,7 @@ class StadiumSimulator:
         return {}
 
     @classmethod
-    def get_sustainability_context(cls) -> Dict[str, Any]:
+    def get_sustainability_context(cls) -> dict[str, Any]:
         """Returns statistics on power consumption, recycling, and carbon emissions based on scenario."""
         scenario = cls.get_active_scenario()
 
@@ -377,7 +378,7 @@ class StadiumSimulator:
         return base_sust
 
     @classmethod
-    def get_operations_context(cls) -> Dict[str, Any]:
+    def get_operations_context(cls) -> dict[str, Any]:
         """Simulates active field logs for security and tactical operations dispatch."""
         scenario = cls.get_active_scenario()
 
@@ -441,7 +442,7 @@ class StadiumSimulator:
         return {}
 
     @classmethod
-    def generate_demo_chat_response(cls, query: str, history: List[Dict[str, str]] = None) -> str:
+    def generate_demo_chat_response(cls, query: str, history: list[dict[str, str]] = None) -> str:
         """Generates synthetic, highly natural chat responses matching search keywords and selected scenarios."""
         q = query.lower()
         scenario = cls.get_active_scenario()
